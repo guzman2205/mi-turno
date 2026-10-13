@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi turno — Gestión de Servicios</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="styles.css?v=2.0">
+  <style>
+    .service-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+    }
+    .service-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      transition: all 0.2s;
+      overflow: hidden;
+      box-sizing: border-box;
+      min-width: 0;
+    }
+    .service-card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
+    .service-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    .service-icon-box {
+      width: 48px; height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .service-title h3 { margin: 0; font-size: 17px; font-weight: 700; color: #0f172a; }
+    .service-prefix {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 6px;
+      margin-top: 4px;
+      background: #f1f5f9;
+      color: #475569;
+    }
+    .sequence-box {
+      background: #f8fafc;
+      border: 1px dashed #cbd5e1;
+      border-radius: 12px;
+      padding: 10px 14px;
+      margin: 12px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-sizing: border-box;
+    }
+    .seq-label { font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase; }
+    .seq-val { font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 800; color: #0284c7; }
+    
+    /* Botones de acción 2x2 dentro de la card sin desbordamiento */
+    .service-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: auto;
+      padding-top: 14px;
+      border-top: 1px solid #f1f5f9;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .btn-card-action {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 7px 8px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid #e2e8f0;
+      background: #ffffff;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+      text-decoration: none;
+    }
+    .btn-card-action:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    }
+    .btn-card-action.btn-action-edit {
+      color: #0284c7;
+      background: #f0f9ff;
+      border-color: #bae6fd;
+    }
+    .btn-card-action.btn-action-edit:hover {
+      background: #e0f2fe;
+      border-color: #7dd3fc;
+    }
+    .btn-card-action.btn-action-reset {
+      color: #475569;
+      background: #f8fafc;
+      border-color: #e2e8f0;
+    }
+    .btn-card-action.btn-action-reset:hover {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+    }
+    .btn-card-action.btn-action-toggle {
+      color: #d97706;
+      background: #fffbeb;
+      border-color: #fde68a;
+    }
+    .btn-card-action.btn-action-toggle:hover {
+      background: #fef3c7;
+      border-color: #fcd34d;
+    }
+    .btn-card-action.btn-action-toggle.inactive {
+      color: #16a34a;
+      background: #f0fdf4;
+      border-color: #bbf7d0;
+    }
+    .btn-card-action.btn-action-toggle.inactive:hover {
+      background: #dcfce7;
+      border-color: #86efac;
+    }
+    .btn-card-action.btn-action-delete {
+      color: #e11d48;
+      background: #fff1f2;
+      border-color: #fecdd3;
+    }
+    .btn-card-action.btn-action-delete:hover {
+      background: #ffe4e6;
+      border-color: #fda4af;
+      color: #be123c;
+    }
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(15,23,42,0.6); backdrop-filter: blur(4px);
+      display: none; align-items: center; justify-content: center; z-index: 9999;
+      opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
+    }
+    .modal-overlay.open,
+    .modal-overlay[style*="display: flex"] {
+      display: flex !important;
+      opacity: 1 !important;
+      pointer-events: auto !important;
+    }
+    .modal-box {
+      background: #fff; border-radius: 20px; max-width: 520px; width: 90%; padding: 28px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+      transform: scale(1);
+    }
+  </style>
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <div id="sidebar-container"></div>
+
+    <main class="app-main">
+      <div id="topbar-container"></div>
+
+      <div class="content-body">
+        <div class="flex-between mb-4">
+          <div>
+            <h2 class="mb-1">Servicio</h2>
+            <p class="text-muted text-sm mb-0">Configura las áreas de servicio, trámites, prefijos y secuencias de correlativos para su empresa</p>
+          </div>
+          <button class="btn btn-primary" onclick="openCreateModal()" id="btn-new-service">
+            <i class="fa-solid fa-plus"></i> Nuevo Servicio
+          </button>
+        </div>
+
+        <div class="service-grid" id="services-container">
+          <div class="loading-state"><i class="fa-solid fa-spinner fa-spin"></i> Cargando servicios...</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal Crear / Editar Servicio -->
+  <div class="modal-overlay" id="service-modal" onclick="if(event.target===this) closeModal()">
+    <div class="modal-box">
+      <div class="flex-between mb-3">
+        <h3 id="modal-title" class="m-0">Crear Servicio</h3>
+        <button type="button" style="border:none; background:none; font-size:22px; cursor:pointer; color:#64748b;" onclick="closeModal()">✕</button>
+      </div>
+
+      <form id="service-form" onsubmit="handleSaveService(event)">
+        <input type="hidden" id="service-id">
+
+        <div class="form-group mb-3">
+          <label class="form-label" for="service-name">Nombre del Servicio o Área *</label>
+          <input type="text" id="service-name" class="form-input" placeholder="Ej: Atención al Cliente, Caja, Ventas, Soporte, Facturación" required>
+        </div>
+
+        <div class="grid-2 gap-3 mb-3">
+          <div class="form-group">
+            <label class="form-label" for="service-prefix">Prefijo de Turno *</label>
+            <input type="text" id="service-prefix" class="form-input" placeholder="Ej: ATC, CAJ, VEN, TRA" maxlength="6" required style="text-transform:uppercase;">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="service-type">Tipo de Área *</label>
+            <select id="service-type" class="form-input" required>
+              <option value="service" selected>Servicio General / Atención Pública (Quiosco)</option>
+              <option value="administrative">Oficina / Área Administrativa (Citas/Secretaría)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid-2 gap-3 mb-3">
+          <div class="form-group">
+            <label class="form-label" for="sequence-start">Iniciar Secuencia en *</label>
+            <input type="number" id="sequence-start" class="form-input" value="1" min="1" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="service-color">Color Distintivo</label>
+            <input type="color" id="service-color" class="form-input" value="#0284c7" style="height:44px; padding:4px;">
+          </div>
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="form-label" for="service-icon">Icono</label>
+            <select id="service-icon" class="form-input">
+              <optgroup label="💼 Atención General y Trámites">
+                <option value="briefcase" selected>💼 Asesoría / Negocios</option>
+                <option value="headset">🎧 Atención al Cliente</option>
+                <option value="user-check">👤 Recepción / Turnos</option>
+                <option value="file-lines">📄 Trámites y Gestión</option>
+                <option value="signature">✍️ Firma / Notaría / Legal</option>
+                <option value="circle-info">ℹ️ Información y Consultas</option>
+              </optgroup>
+              <optgroup label="💳 Caja, Finanzas y Cobranzas">
+                <option value="credit-card">💳 Pagos / Tarjetas</option>
+                <option value="cash-register">🏷️ Caja / Facturación</option>
+                <option value="file-invoice-dollar">🧾 Cobranzas / Cuentas</option>
+                <option value="landmark">🏛️ Servicios Bancarios</option>
+              </optgroup>
+              <optgroup label="🛠️ Técnica, Soporte y Logística">
+                <option value="wrench">🔧 Soporte Técnico</option>
+                <option value="screwdriver-wrench">🛠️ Mantenimiento / Taller</option>
+                <option value="box-archive">📦 Entregas y Envíos</option>
+                <option value="truck-fast">🚚 Despacho y Logística</option>
+                <option value="cart-shopping">🛒 Ventas y Compras</option>
+              </optgroup>
+              <optgroup label="🩺 Salud y Bienestar">
+                <option value="stethoscope">🩺 Consulta Médica / General</option>
+                <option value="heart-pulse">🚨 Urgencias / Prioritario</option>
+                <option value="flask">🧪 Laboratorio / Muestras</option>
+                <option value="pills">💊 Farmacia / Medicamentos</option>
+                <option value="tooth">🦷 Odontología</option>
+                <option value="baby">👶 Pediatría / Maternidad</option>
+              </optgroup>
+            </select>
+        </div>
+
+        <div class="form-group mb-4">
+          <label class="form-label" for="service-desc">Descripción (Opcional)</label>
+          <input type="text" id="service-desc" class="form-input" placeholder="Breve descripción del servicio para clientes o personal">
+        </div>
+
+        <div class="flex-between">
+          <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-service">Guardar Servicio</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Reiniciar Secuencia -->
+  <div class="modal-overlay" id="reset-modal" onclick="if(event.target===this) closeResetModal()">
+    <div class="modal-box">
+      <div class="flex-between mb-3">
+        <h3 class="m-0"><i class="fa-solid fa-rotate-left text-warning"></i> Reiniciar Secuencia</h3>
+        <button type="button" style="border:none; background:none; font-size:22px; cursor:pointer; color:#64748b;" onclick="closeResetModal()">✕</button>
+      </div>
+      <p class="text-muted text-sm mb-3">
+        Define a partir de qué número comenzarán a emitirse los próximos turnos para este servicio.
+      </p>
+
+      <input type="hidden" id="reset-service-id">
+      <div class="form-group mb-4">
+        <label class="form-label">Nuevo número inicial de secuencia:</label>
+        <input type="number" id="new-sequence-input" class="form-input" min="1" value="1" required>
+      </div>
+
+      <div class="flex-between">
+        <button type="button" class="btn btn-secondary" onclick="closeResetModal()">Cancelar</button>
+        <button type="button" class="btn btn-warning" onclick="confirmResetSequence()">Reiniciar Ahora</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Confirmar Eliminación de Servicio -->
+  <div class="modal-overlay" id="delete-modal" onclick="if(event.target===this) closeDeleteModal()">
+    <div class="modal-box" style="max-width: 440px; text-align: center;">
+      <div style="width: 56px; height: 56px; border-radius: 50%; background: #fee2e2; color: #dc2626; display: flex; align-items: center; justify-content: center; font-size: 26px; margin: 0 auto 16px;">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+      <h3 style="margin: 0 0 10px 0; font-size: 20px; font-weight: 800; color: #0f172a;">¿Eliminar Servicio?</h3>
+      <p style="font-size: 14px; color: #64748b; margin-bottom: 24px; line-height: 1.5;">
+        ¿Está seguro de que desea eliminar el servicio <strong id="delete-service-name" style="color: #0f172a;"></strong>?<br>Esta acción desvinculará sus mostradores y es <strong>irreversible</strong>.
+      </p>
+
+      <input type="hidden" id="delete-service-id">
+
+      <div class="flex-between gap-3">
+        <button type="button" class="btn btn-secondary flex-1" style="justify-content:center; padding: 10px 18px;" onclick="closeDeleteModal()">
+          Cancelar
+        </button>
+        <button type="button" class="btn btn-danger flex-1" style="justify-content:center; background:#e11d48; border-color:#e11d48; padding: 10px 18px; font-weight:700;" onclick="confirmDeleteService()">
+          <i class="fa-solid fa-trash-can"></i> Sí, Eliminar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="app.js"></script>
+  <script>
+    let servicesList = [];
+
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!MT.getToken()) {
+        window.location.href = 'login.html';
+        return;
+      }
+      MT.renderSidebar('services');
+      MT.renderTopbar('Servicio', 'Administración de servicios, trámites y correlativos');
+      loadServices();
+
+      if (MT.socket) {
+        MT.socket.on('services:changed', () => loadServices());
+      }
+    });
+
+    async function loadServices() {
+      try {
+        servicesList = await MT.api('/services');
+        renderServices(servicesList || []);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    }
+
+    function renderServices(list) {
+      const container = document.getElementById('services-container');
+      if (!list || list.length === 0) {
+        container.innerHTML = '<p class="text-muted p-4">No hay servicios configurados.</p>';
+        return;
+      }
+
+      container.innerHTML = list.map(s => `
+        <div class="service-card" style="border-top: 4px solid ${s.color}; opacity: ${s.active ? '1' : '0.82'};">
+          <div class="service-header">
+            <div class="service-icon-box" style="background:${s.color}; color:#fff; display:flex; align-items:center; justify-content:center;">
+              <i class="fa-solid fa-${s.icon || 'briefcase'}"></i>
+            </div>
+            <div class="service-title" style="flex:1; min-width:0;">
+              <h3 title="${escapeHtml(s.name)}" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${s.name}</h3>
+              <div class="flex-align gap-2 mt-1" style="flex-wrap:wrap;">
+                <span class="service-prefix">Prefijo: <strong>${s.prefix}</strong></span>
+                ${s.type === 'administrative' ? '<span class="badge" style="background:#e0f2fe; color:#0284c7; font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px;">Oficina Administrativa</span>' : '<span class="badge" style="background:#f1f5f9; color:#475569; font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px;">Servicio Público</span>'}
+                ${!s.active ? '<span class="badge badge-amber" style="font-size:10px; font-weight:700;">Inactivo</span>' : ''}
+              </div>
+            </div>
+          </div>
+
+          <div class="sequence-box">
+            <div>
+              <span class="seq-label">Secuencia Inicia:</span>
+              <span class="seq-val">${s.sequence_start || 1}</span>
+            </div>
+            <div style="text-align:right;">
+              <span class="seq-label">Último Emitido:</span>
+              <span class="seq-val" style="color:#0f172a;">${s.current_number || 0}</span>
+            </div>
+          </div>
+
+          <!-- Acciones 2x2: dentro de la card y sin desbordamiento -->
+          <div class="service-actions">
+            <button type="button" class="btn-card-action btn-action-edit" onclick="openEditModal(${s.id})" title="Editar servicio">
+              <i class="fa-solid fa-pen-to-square"></i> Editar
+            </button>
+            <button type="button" class="btn-card-action btn-action-reset" onclick="openResetModal(${s.id}, ${s.sequence_start || 1})" title="Reiniciar correlativo">
+              <i class="fa-solid fa-rotate-left"></i> Secuencia
+            </button>
+            <button type="button" class="btn-card-action btn-action-toggle ${s.active ? '' : 'inactive'}" onclick="toggleActive(${s.id})" title="${s.active ? 'Desactivar servicio' : 'Activar servicio'}">
+              <i class="fa-solid fa-${s.active ? 'eye-slash' : 'eye'}"></i> ${s.active ? 'Desactivar' : 'Activar'}
+            </button>
+            <button type="button" class="btn-card-action btn-action-delete" onclick="openDeleteModal(${s.id}, '${escapeHtml(s.name)}')" title="Eliminar servicio">
+              <i class="fa-solid fa-trash-can"></i> Eliminar
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function openCreateModal() {
+      document.getElementById('service-form').reset();
+      document.getElementById('service-id').value = '';
+      document.getElementById('service-type').value = 'service';
+      document.getElementById('service-color').value = '#0284c7';
+      document.getElementById('service-icon').value = 'briefcase';
+      document.getElementById('sequence-start').value = '1';
+      document.getElementById('modal-title').textContent = 'Crear Servicio';
+      
+      const modal = document.getElementById('service-modal');
+      modal.classList.add('open');
+      modal.style.display = 'flex';
+      modal.style.opacity = '1';
+      modal.style.pointerEvents = 'auto';
+    }
+
+    function openEditModal(id) {
+      const s = servicesList.find(item => Number(item.id) === Number(id));
+      if (!s) {
+        console.warn('Servicio no encontrado para ID:', id);
+        return;
+      }
+
+      document.getElementById('service-id').value = s.id;
+      document.getElementById('service-name').value = s.name || '';
+      document.getElementById('service-prefix').value = s.prefix || '';
+      document.getElementById('service-type').value = s.type || 'service';
+      document.getElementById('sequence-start').value = s.sequence_start || 1;
+      document.getElementById('service-color').value = s.color || '#0284c7';
+      
+      const iconSelect = document.getElementById('service-icon');
+      if (iconSelect) {
+        const exists = Array.from(iconSelect.options).some(o => o.value === s.icon);
+        if (exists) {
+          iconSelect.value = s.icon;
+        } else {
+          const opt = document.createElement('option');
+          opt.value = s.icon || 'briefcase';
+          opt.textContent = `⭐ ${s.icon}`;
+          iconSelect.appendChild(opt);
+          iconSelect.value = s.icon;
+        }
+      }
+
+      document.getElementById('service-desc').value = s.description || '';
+      document.getElementById('modal-title').textContent = 'Editar Servicio';
+
+      const modal = document.getElementById('service-modal');
+      modal.classList.add('open');
+      modal.style.display = 'flex';
+      modal.style.opacity = '1';
+      modal.style.pointerEvents = 'auto';
+    }
+
+    function closeModal() {
+      const modal = document.getElementById('service-modal');
+      modal.classList.remove('open');
+      modal.style.display = 'none';
+      modal.style.opacity = '0';
+      modal.style.pointerEvents = 'none';
+    }
+
+    async function handleSaveService(e) {
+      e.preventDefault();
+      const id = document.getElementById('service-id').value;
+      const payload = {
+        name: document.getElementById('service-name').value.trim(),
+        prefix: document.getElementById('service-prefix').value.trim().toUpperCase(),
+        type: document.getElementById('service-type').value,
+        sequence_start: document.getElementById('sequence-start').value,
+        color: document.getElementById('service-color').value,
+        icon: document.getElementById('service-icon').value,
+        description: document.getElementById('service-desc').value.trim()
+      };
+
+      try {
+        if (id) {
+          await MT.api(`/services/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+          MT.toast('Servicio actualizado con éxito', 'success');
+        } else {
+          await MT.api('/services', { method: 'POST', body: JSON.stringify(payload) });
+          MT.toast('Servicio creado con éxito', 'success');
+        }
+        closeModal();
+        loadServices();
+      } catch (err) {
+        MT.toast(err.message || 'Error guardando servicio', 'error');
+      }
+    }
+
+    function openResetModal(id, currentStart) {
+      document.getElementById('reset-service-id').value = id;
+      document.getElementById('new-sequence-input').value = currentStart || 1;
+      
+      const modal = document.getElementById('reset-modal');
+      modal.classList.add('open');
+      modal.style.display = 'flex';
+      modal.style.opacity = '1';
+      modal.style.pointerEvents = 'auto';
+    }
+
+    function closeResetModal() {
+      const modal = document.getElementById('reset-modal');
+      modal.classList.remove('open');
+      modal.style.display = 'none';
+      modal.style.opacity = '0';
+      modal.style.pointerEvents = 'none';
+    }
+
+    async function confirmResetSequence() {
+      const id = document.getElementById('reset-service-id').value;
+      const sequence_start = document.getElementById('new-sequence-input').value;
+
+      try {
+        await MT.api(`/services/${id}/reset-sequence`, {
+          method: 'POST',
+          body: JSON.stringify({ sequence_start })
+        });
+        MT.toast(`Secuencia reiniciada a partir de ${sequence_start}`, 'success');
+        closeResetModal();
+        loadServices();
+      } catch (err) {
+        MT.toast(err.message || 'Error reiniciando secuencia', 'error');
+      }
+    }
+
+    async function toggleActive(id) {
+      try {
+        await MT.api(`/services/${id}/toggle-status`, { method: 'PATCH' });
+        MT.toast('Estado del servicio actualizado', 'info');
+        loadServices();
+      } catch (err) {
+        // Fallback si no soporta PATCH
+        try {
+          await MT.api(`/services/${id}?toggle=true`, { method: 'DELETE' });
+          MT.toast('Estado del servicio actualizado', 'info');
+          loadServices();
+        } catch (e) {
+          MT.toast(err.message || 'Error actualizando estado', 'error');
+        }
+      }
+    }
+
+    function openDeleteModal(id, name) {
+      document.getElementById('delete-service-id').value = id;
+      document.getElementById('delete-service-name').textContent = `"${name}"`;
+      
+      const modal = document.getElementById('delete-modal');
+      modal.classList.add('open');
+      modal.style.display = 'flex';
+      modal.style.opacity = '1';
+      modal.style.pointerEvents = 'auto';
+    }
+
+    function closeDeleteModal() {
+      const modal = document.getElementById('delete-modal');
+      modal.classList.remove('open');
+      modal.style.display = 'none';
+      modal.style.opacity = '0';
+      modal.style.pointerEvents = 'none';
+    }
+
+    async function confirmDeleteService() {
+      const id = document.getElementById('delete-service-id').value;
+      if (!id) return;
+
+      try {
+        const res = await MT.api(`/services/${id}`, { method: 'DELETE' });
+        MT.toast(res?.message || 'Servicio eliminado exitosamente', 'success');
+        closeDeleteModal();
+        loadServices();
+      } catch (err) {
+        MT.toast(err.message || 'Error al eliminar servicio', 'error');
+      }
+    }
+  </script>
+</body>
+</html>

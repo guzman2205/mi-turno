@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi turno — Panel del Operador</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="styles.css?v=2.0">
+  <style>
+    .badge-pref {
+      background: #fef3c7;
+      color: #b45309;
+      border: 1px solid #fcd34d;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .badge-transf {
+      background: #e0e7ff;
+      color: #3730a3;
+      border: 1px solid #c7d2fe;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    .modal-card {
+      background: #ffffff;
+      border-radius: 20px;
+      max-width: 480px;
+      width: 90%;
+      padding: 28px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .modal-header h3 { font-size: 20px; margin: 0; }
+  </style>
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <div id="sidebar-container"></div>
+
+    <main class="app-main">
+      <div id="topbar-container"></div>
+
+      <div class="content-body">
+        <!-- Current Attention Box & Full-Height Right Sidebar -->
+        <div class="attention-layout">
+          <div class="card attention-main-card">
+            <div class="attention-header">
+              <div>
+                <span class="badge-status-attending"><i class="fa-solid fa-bell"></i> TURNO EN ATENCIÓN</span>
+                <span id="current-badge-pref" class="badge-pref" style="display:none; margin-left:8px;">
+                  <i class="fa-solid fa-wheelchair"></i> PREFERENCIAL
+                </span>
+                <span id="current-badge-transf" class="badge-transf" style="display:none; margin-left:8px;">
+                  <i class="fa-solid fa-arrow-right-arrow-left"></i> DERIVADO
+                </span>
+              </div>
+              <div class="timer-badge" id="elapsed-time">00:00</div>
+            </div>
+
+            <div class="attention-body">
+              <div class="current-ticket-number" id="current-ticket-num">--</div>
+              <div id="current-client-name" style="font-size:20px; font-weight:800; color:#0f172a; margin-top:2px; display:none;"></div>
+              <div class="current-ticket-service" id="current-ticket-service">Ningún turno llamado</div>
+            </div>
+
+            <div class="attention-actions">
+              <button class="btn btn-primary btn-call-next" id="btn-call-next" onclick="callNextTicket()">
+                <i class="fa-solid fa-forward-step"></i> Llamar Siguiente Turno
+              </button>
+              <button class="btn btn-secondary" id="btn-recall" onclick="repeatCall()" disabled>
+                <i class="fa-solid fa-volume-high"></i> Repetir Llamada
+              </button>
+              <button class="btn btn-warning" id="btn-absent" onclick="markAbsent()" disabled>
+                <i class="fa-solid fa-user-slash"></i> Marcar Ausente
+              </button>
+              <button class="btn btn-primary" style="background:#4f46e5; border-color:#4f46e5;" id="btn-transfer" onclick="openTransferModal()" disabled>
+                <i class="fa-solid fa-share-nodes"></i> Transferir a Otro Servicio
+              </button>
+              <button class="btn" style="background:#0284c7; color:#ffffff; border-color:#0284c7;" id="btn-call-name" onclick="callCurrentByName()" disabled>
+                <i class="fa-solid fa-bullhorn"></i> Llamar por Nombre de Usuario
+              </button>
+              <button class="btn btn-success" id="btn-finish" onclick="finishTicket()" disabled>
+                <i class="fa-solid fa-check-double"></i> Finalizar Atención
+              </button>
+            </div>
+          </div>
+
+          <!-- Sidebar Card: Full-Height Right Column (Blue Box Expanded) -->
+          <div class="card waiting-sidebar-card" style="display:flex; flex-direction:column; height:100%; min-height:680px; padding:0; overflow:hidden;">
+            <!-- Active Workstation Header & Compact Controls -->
+            <div style="background:#0f172a; color:#fff; padding:16px 20px; border-bottom:1px solid #1e293b;">
+              <div class="flex-between mb-2">
+                <span style="font-size:12px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.8px;">
+                  <i class="fa-solid fa-headset"></i> Puesto de Atención Activo
+                </span>
+                <div style="display:flex; gap:6px;">
+                  <button type="button" id="btn-pause-workshift" onclick="toggleWorkshiftPause()" style="background:rgba(245,158,11,0.2); border:1px solid rgba(245,158,11,0.4); color:#fcd34d; padding:3px 10px; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer;" title="Poner puesto en Pausa / Receso (sin finalizar jornada)">
+                    <i class="fa-solid fa-pause"></i> Pausa
+                  </button>
+                  <button type="button" onclick="openWorkstationModal()" style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:#38bdf8; padding:3px 10px; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer;">
+                    <i class="fa-solid fa-pen"></i> Cambiar
+                  </button>
+                  <button type="button" onclick="endWorkshift()" style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); color:#fca5a5; padding:3px 10px; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer;" title="Finalizar jornada de atención">
+                    <i class="fa-solid fa-right-from-bracket"></i> Finalizar Jornada
+                  </button>
+                </div>
+              </div>
+              <div id="active-workstation-title" style="font-size:16px; font-weight:800; color:#ffffff; font-family:'Outfit',sans-serif; margin-bottom:12px;">
+                Cargando Puesto...
+              </div>
+
+              <!-- Controls relocated to top of sidebar -->
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <div>
+                  <label class="form-label text-xs" style="color:#94a3b8; margin-bottom:2px;" for="select-service-filter">Filtro Servicio:</label>
+                  <select id="select-service-filter" class="form-input" onchange="onSidebarServiceFilterChange()" style="padding:6px 10px; font-size:12px; background:#1e293b; color:#fff; border-color:#334155; border-radius:8px; width:100%;">
+                    <option value="">Todos los servicios</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="form-label text-xs" style="color:#94a3b8; margin-bottom:2px;" for="select-call-mode">Anuncio de Voz:</label>
+                  <select id="select-call-mode" class="form-input" onchange="onCallModeChange()" style="padding:6px 10px; font-size:12px; background:#1e293b; color:#fff; border-color:#334155; border-radius:8px; width:100%;">
+                    <option value="name">Por Nombre</option>
+                    <option value="number">Por Número</option>
+                    <option value="both">Número y Nombre</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Main Tabs -->
+            <div class="sidebar-tabs" style="display:flex; border-bottom:1px solid #e2e8f0; background:#f8fafc;">
+              <button type="button" class="sidebar-tab-btn" id="tab-btn-waiting" onclick="switchSidebarTab('waiting')"
+                style="flex:1; padding:12px 14px; border:none; background:transparent; font-weight:700; font-size:13px; color:#0284c7; border-bottom:2px solid #0284c7; cursor:pointer;">
+                <i class="fa-solid fa-users"></i> En Espera (<span id="waiting-count">0</span>)
+              </button>
+              <button type="button" class="sidebar-tab-btn" id="tab-btn-history" onclick="switchSidebarTab('history')"
+                style="flex:1; padding:12px 14px; border:none; background:transparent; font-weight:700; font-size:13px; color:#64748b; border-bottom:2px solid transparent; cursor:pointer;">
+                <i class="fa-solid fa-clock-rotate-left"></i> Historial Reciente (<span id="history-count">0</span>)
+              </button>
+            </div>
+
+            <!-- Tab 1: Cola en Espera -->
+            <div id="tab-content-waiting">
+              <div class="queue-filter-bar p-3 flex-align gap-1" style="flex-wrap:wrap; background:#ffffff; border-bottom:1px solid #f1f5f9;">
+                <button class="btn btn-xs btn-outline-primary active" onclick="setQueueFilter('all', this)">Todos</button>
+                <button class="btn btn-xs btn-outline-primary" onclick="setQueueFilter('pref', this)">⭐ Preferencial</button>
+                <button class="btn btn-xs btn-outline-primary" onclick="setQueueFilter('transf', this)">↩ Derivado</button>
+                <button class="btn btn-xs btn-outline-primary" onclick="setQueueFilter('normal', this)">Normal</button>
+              </div>
+              <div class="waiting-list p-3" id="waiting-list-container" style="max-height:480px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">
+                <div class="text-muted text-center py-4">Selecciona un mostrador para ver la cola.</div>
+              </div>
+            </div>
+
+            <!-- Tab 2: Historial Atendidos/Ausentes para Re-llamar -->
+            <div id="tab-content-history" style="display:none;">
+              <div class="history-list p-3" id="history-list-container" style="max-height:520px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">
+                <div class="text-muted text-center py-4">Cargando historial de turnos...</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal Derivar / Transferir Turno -->
+  <div class="modal-overlay" id="transfer-modal" onclick="if(event.target===this) closeTransferModal()">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-share-nodes text-primary"></i> Transferir a Otro Servicio</h3>
+        <button style="border:none; background:none; font-size:20px; cursor:pointer;" onclick="closeTransferModal()">✕</button>
+      </div>
+      <p class="text-muted text-sm mb-4">
+        El turno actual pasará automáticamente a la cola del servicio seleccionado manteniendo su número e identificándose como turno transferido.
+      </p>
+
+      <div class="form-group mb-3">
+        <label class="form-label">Área o Servicio de Destino:</label>
+        <select id="transfer-service-select" class="form-input">
+          <option value="">Seleccione el servicio de destino...</option>
+        </select>
+      </div>
+
+      <div class="form-group mb-4">
+        <label class="form-label">Notas / Motivo de transferencia (Opcional):</label>
+        <textarea id="transfer-notes" class="form-input" rows="3" placeholder="Ej: Trámite completado. Pasa a ventanilla de caja, entregas o asesoría."></textarea>
+      </div>
+
+      <div class="flex-between">
+        <button class="btn btn-secondary" onclick="closeTransferModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="confirmTransfer()"><i class="fa-solid fa-check"></i> Confirmar Transferencia</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Apertura / Inicio de Jornada de Atención -->
+  <div class="modal-overlay" id="workstation-init-modal" onclick="if(event.target===this) closeWorkstationModal()" style="display:none; background:rgba(15,23,42,0.85); backdrop-filter:blur(8px);">
+    <div class="modal-card" style="max-width:520px; padding:32px; border-radius:24px; box-shadow:0 25px 50px rgba(0,0,0,0.35); background:#ffffff; border:1px solid #e2e8f0; position:relative;">
+      <button type="button" style="position:absolute; top:20px; right:20px; border:none; background:none; font-size:22px; cursor:pointer; color:#64748b;" onclick="closeWorkstationModal()" title="Cerrar ventana">✕</button>
+
+      <div style="text-align:center; margin-bottom:24px;">
+        <div style="width:64px; height:64px; background:#e0f2fe; color:#0284c7; border-radius:20px; display:inline-flex; align-items:center; justify-content:center; font-size:28px; margin-bottom:12px;">
+          <i class="fa-solid fa-headset"></i>
+        </div>
+        <h2 style="font-size:22px; font-weight:800; color:#0f172a; margin-bottom:6px; font-family:'Outfit',sans-serif;">Apertura de Puesto de Atención</h2>
+        <p style="font-size:14px; color:#64748b; margin:0;">Seleccione el Área de Servicio y Mostrador que operará en este puesto para comenzar la atención de usuarios.</p>
+      </div>
+
+      <div class="form-group mb-3">
+        <label class="form-label" for="modal-init-service" style="font-weight:700; color:#334155; font-size:13px;">
+          <i class="fa-solid fa-layer-group text-primary"></i> 1. Área de Servicio
+        </label>
+        <select id="modal-init-service" class="form-input" onchange="onModalServiceChange()" style="padding:12px 14px; font-weight:700; border-radius:12px; font-size:15px; border-color:#0284c7;">
+          <option value="">-- Seleccione Área de Servicio --</option>
+        </select>
+      </div>
+
+      <div class="form-group mb-3">
+        <label class="form-label" for="modal-init-counter" style="font-weight:700; color:#334155; font-size:13px;">
+          <i class="fa-solid fa-desktop text-primary"></i> 2. Mostrador / Ventanilla Asignada
+        </label>
+        <select id="modal-init-counter" class="form-input" style="padding:12px 14px; font-weight:700; border-radius:12px; font-size:15px; border-color:#0284c7;">
+          <option value="">-- Seleccione Mostrador --</option>
+        </select>
+      </div>
+
+      <div class="form-group mb-4">
+        <label class="form-label" for="modal-init-callmode" style="font-weight:700; color:#334155; font-size:13px;">
+          <i class="fa-solid fa-volume-high text-primary"></i> 3. Modo de Anuncio de Voz
+        </label>
+        <select id="modal-init-callmode" class="form-input" style="padding:12px 14px; font-weight:600; border-radius:12px; font-size:14px;">
+          <option value="name" selected>Llamar por Nombre de Usuario (ej: "Juan Pérez")</option>
+          <option value="number">Llamar por Número de Turno (ej: "Turno A-001")</option>
+          <option value="both">Llamar por Número y Nombre (ej: "Turno A-001, usuario Juan Pérez")</option>
+        </select>
+      </div>
+
+      <div style="display:flex; gap:12px; margin-top:8px;">
+        <button type="button" class="btn btn-secondary" onclick="closeWorkstationModal()" style="flex:1; padding:14px; border-radius:14px; font-weight:700; justify-content:center;">
+          Cancelar
+        </button>
+        <button type="button" class="btn btn-primary" onclick="confirmStartWorkstation()" style="flex:2; padding:14px; border-radius:14px; font-size:16px; font-weight:800; font-family:'Outfit',sans-serif; justify-content:center; box-shadow:0 10px 20px rgba(2,132,199,0.35);">
+          <i class="fa-solid fa-right-to-bracket"></i> Iniciar Jornada
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="app.js"></script>
+  <script>
+    let activeCounterId = null;
+    let currentTicket = null;
+    let timerInterval = null;
+    let timerSeconds = 0;
+    let allServices = [];
+    let allCounters = [];
+    let activeQueueFilter = 'all';
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      MT.renderSidebar('call');
+      MT.renderTopbar('Panel del Operador', 'Gestión, llamado y atención de turnos');
+
+      await loadServices();
+      await loadCounters();
+
+      const savedCounterId = localStorage.getItem('miturno_saved_counter_id');
+      const savedMode = localStorage.getItem('miturno_call_by_mode') || 'name';
+
+      if (savedCounterId && allCounters.some(c => String(c.id) === String(savedCounterId))) {
+        activeCounterId = savedCounterId;
+        if (!window.MT_SETTINGS) window.MT_SETTINGS = {};
+        window.MT_SETTINGS.call_by_mode = savedMode;
+
+        updateWorkstationUI(true);
+        loadQueue();
+      } else {
+        // Open Workstation Setup Modal on entry
+        openWorkstationModal();
+      }
+
+      if (MT.socket) {
+        const refreshAll = () => { if (activeCounterId) { loadQueue(); loadHistory(); } };
+        MT.socket.on('ticket:new', refreshAll);
+        MT.socket.on('ticket:called', refreshAll);
+        MT.socket.on('ticket:attended', refreshAll);
+        MT.socket.on('ticket:absent', refreshAll);
+        MT.socket.on('ticket:transferred', refreshAll);
+      }
+    });
+
+    function openWorkstationModal() {
+      const modal = document.getElementById('workstation-init-modal');
+      if (!modal) return;
+
+      const serviceSelect = document.getElementById('modal-init-service');
+      const counterSelect = document.getElementById('modal-init-counter');
+      const callModeSelect = document.getElementById('modal-init-callmode');
+
+      const savedService = localStorage.getItem('miturno_saved_service_id') || '';
+      const savedCounter = localStorage.getItem('miturno_saved_counter_id') || '';
+      const savedMode = localStorage.getItem('miturno_call_by_mode') || 'name';
+
+      if (serviceSelect) {
+        serviceSelect.innerHTML = '<option value="">-- 1. Seleccione Área de Servicio --</option>' +
+          allServices.map(s => `<option value="${s.id}">${s.name} (${s.prefix})</option>`).join('');
+        serviceSelect.value = savedService;
+      }
+
+      onModalServiceChange();
+
+      if (counterSelect && savedCounter) {
+        counterSelect.value = savedCounter;
+      }
+      if (callModeSelect) {
+        callModeSelect.value = savedMode;
+      }
+
+      modal.style.display = 'flex';
+    }
+
+    function closeWorkstationModal() {
+      const modal = document.getElementById('workstation-init-modal');
+      if (modal) modal.style.display = 'none';
+      if (!activeCounterId) {
+        updateWorkstationUI(false);
+      }
+    }
+
+    function onModalServiceChange() {
+      const serviceSelect = document.getElementById('modal-init-service');
+      const counterSelect = document.getElementById('modal-init-counter');
+      const selectedServiceId = serviceSelect?.value || '';
+
+      let filtered = allCounters;
+      if (selectedServiceId) {
+        filtered = allCounters.filter(c => !c.service_id || String(c.service_id) === String(selectedServiceId));
+      }
+
+      if (counterSelect) {
+        counterSelect.innerHTML = '<option value="">-- 2. Seleccione Mostrador --</option>' +
+          filtered.map(c => `<option value="${c.id}">${c.name} (${c.service?.name || 'General'})</option>`).join('');
+      }
+    }
+
+    function confirmStartWorkstation() {
+      const serviceId = document.getElementById('modal-init-service')?.value || '';
+      const counterId = document.getElementById('modal-init-counter')?.value || '';
+      const callMode = document.getElementById('modal-init-callmode')?.value || 'name';
+
+      if (!counterId) {
+        MT.toast('Por favor seleccione su Mostrador / Ventanilla', 'error');
+        return;
+      }
+
+      activeCounterId = counterId;
+      localStorage.setItem('miturno_saved_service_id', serviceId);
+      localStorage.setItem('miturno_saved_counter_id', counterId);
+      localStorage.setItem('miturno_call_by_mode', callMode);
+
+      if (!window.MT_SETTINGS) window.MT_SETTINGS = {};
+      window.MT_SETTINGS.call_by_mode = callMode;
+
+      document.getElementById('workstation-init-modal').style.display = 'none';
+
+      updateWorkstationUI(true);
+      loadQueue();
+      if (activeSidebarTab === 'history') loadHistory();
+
+      MT.toast('Jornada iniciada correctamente', 'success');
+    }
+
+    function endWorkshift() {
+      if (confirm('¿Desea finalizar la jornada de atención en este puesto?')) {
+        activeCounterId = null;
+        localStorage.removeItem('miturno_saved_counter_id');
+        localStorage.removeItem('miturno_saved_service_id');
+
+        resetCurrentTicket();
+        updateWorkstationUI(false);
+        MT.toast('Jornada finalizada. Puesto de atención liberado.', 'info');
+
+        setTimeout(() => openWorkstationModal(), 400);
+      }
+    }
+
+    async function toggleWorkshiftPause() {
+      if (!activeCounterId) {
+        MT.toast('Selecciona un mostrador primero', 'warning');
+        return;
+      }
+      try {
+        const res = await MT.api(`/counters/${activeCounterId}/pause`, { method: 'POST' });
+        const counter = res?.counter;
+        const isPaused = counter?.status === 'paused';
+        const pauseBtn = document.getElementById('btn-pause-workshift');
+
+        if (pauseBtn) {
+          if (isPaused) {
+            pauseBtn.innerHTML = '<i class="fa-solid fa-play"></i> Reanudar';
+            pauseBtn.style.background = 'rgba(16,185,129,0.2)';
+            pauseBtn.style.color = '#6ee7b7';
+            pauseBtn.style.borderColor = 'rgba(16,185,129,0.4)';
+          } else {
+            pauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i> Pausa';
+            pauseBtn.style.background = 'rgba(245,158,11,0.2)';
+            pauseBtn.style.color = '#fcd34d';
+            pauseBtn.style.borderColor = 'rgba(245,158,11,0.4)';
+          }
+        }
+
+        const btnCallNext = document.getElementById('btn-call-next');
+        if (btnCallNext) btnCallNext.disabled = isPaused;
+
+        MT.toast(res.message || (isPaused ? 'Puesto puesto en Pausa / Receso' : 'Atención reanudada'), 'info');
+      } catch (err) {
+        MT.toast(err.message || 'Error al cambiar pausa', 'error');
+      }
+    }
+
+    function updateWorkstationUI(isActive) {
+      const btnCallNext = document.getElementById('btn-call-next');
+      const titleEl = document.getElementById('active-workstation-title');
+      const sidebarServiceSelect = document.getElementById('select-service-filter');
+      const sidebarCallModeSelect = document.getElementById('select-call-mode');
+
+      const savedServiceId = localStorage.getItem('miturno_saved_service_id') || '';
+      const savedMode = localStorage.getItem('miturno_call_by_mode') || 'name';
+
+      if (sidebarServiceSelect) {
+        sidebarServiceSelect.innerHTML = '<option value="">Todos los servicios</option>' +
+          allServices.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+        sidebarServiceSelect.value = savedServiceId;
+      }
+
+      if (sidebarCallModeSelect) {
+        sidebarCallModeSelect.value = savedMode;
+      }
+
+      if (isActive && activeCounterId) {
+        if (btnCallNext) btnCallNext.disabled = false;
+
+        const activeCounter = allCounters.find(c => String(c.id) === String(activeCounterId));
+        const activeService = allServices.find(s => String(s.id) === String(savedServiceId));
+
+        const counterName = activeCounter?.name || 'Mostrador';
+        const serviceName = activeService?.name || activeCounter?.service?.name || 'Atención General';
+
+        if (titleEl) {
+          titleEl.innerHTML = `<i class="fa-solid fa-desktop text-primary"></i> ${counterName}<br><small style="font-size:12px; font-weight:600; color:#94a3b8;"><i class="fa-solid fa-tag"></i> ${serviceName}</small>`;
+        }
+      } else {
+        if (btnCallNext) btnCallNext.disabled = true;
+        if (titleEl) {
+          titleEl.innerHTML = `<span style="color:#f59e0b;"><i class="fa-solid fa-triangle-exclamation"></i> Puesto Inactivo</span>`;
+        }
+      }
+    }
+
+    function onSidebarServiceFilterChange() {
+      const serviceSelect = document.getElementById('select-service-filter');
+      const serviceId = serviceSelect?.value || '';
+      localStorage.setItem('miturno_saved_service_id', serviceId);
+      loadQueue();
+    }
+
+    function onCallModeChange() {
+      const mode = document.getElementById('select-call-mode')?.value || 'name';
+      if (!window.MT_SETTINGS) window.MT_SETTINGS = {};
+      window.MT_SETTINGS.call_by_mode = mode;
+      localStorage.setItem('miturno_call_by_mode', mode);
+      MT.toast(`Modo de voz cambiado a: ${mode === 'name' ? 'Por Nombre' : mode === 'both' ? 'Número y Nombre' : 'Por Número'}`, 'info');
+    }
+
+    // ── Atajos de Teclado Globales ─────────────────────────────
+    document.addEventListener('keydown', (e) => {
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+      if (e.code === 'Space') { e.preventDefault(); callNextTicket(); }
+      else if (e.key === 'a' || e.key === 'A') { e.preventDefault(); finishTicket(); }
+      else if (e.key === 'u' || e.key === 'U') { e.preventDefault(); markAbsent(); }
+      else if (e.key === 'r' || e.key === 'R') { e.preventDefault(); repeatCall(); }
+      else if (e.key === 'Escape') { closeTransferModal(); }
+    });
+
+    async function loadServices() {
+      try {
+        allServices = await MT.api('/services').catch(() => []);
+        const select = document.getElementById('transfer-service-select');
+        select.innerHTML = '<option value="">-- Seleccionar Servicio Destino --</option>' +
+          allServices.map(s => `<option value="${s.id}">${s.name} (${s.prefix})</option>`).join('');
+      } catch (e) {}
+    }
+
+    async function loadCounters() {
+      try {
+        allCounters = await MT.api('/counters').catch(() => []);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function setQueueFilter(filter, btn) {
+      activeQueueFilter = filter;
+      document.querySelectorAll('.queue-filter-bar button').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      loadQueue();
+    }
+
+    let activeSidebarTab = 'waiting';
+
+    function switchSidebarTab(tab) {
+      activeSidebarTab = tab;
+      const waitingBtn = document.getElementById('tab-btn-waiting');
+      const historyBtn = document.getElementById('tab-btn-history');
+      const waitingContent = document.getElementById('tab-content-waiting');
+      const historyContent = document.getElementById('tab-content-history');
+
+      if (tab === 'waiting') {
+        waitingBtn.style.color = '#0284c7';
+        waitingBtn.style.borderBottomColor = '#0284c7';
+        historyBtn.style.color = '#64748b';
+        historyBtn.style.borderBottomColor = 'transparent';
+        waitingContent.style.display = 'block';
+        historyContent.style.display = 'none';
+        loadQueue();
+      } else {
+        historyBtn.style.color = '#0284c7';
+        historyBtn.style.borderBottomColor = '#0284c7';
+        waitingBtn.style.color = '#64748b';
+        waitingBtn.style.borderBottomColor = 'transparent';
+        waitingContent.style.display = 'none';
+        historyContent.style.display = 'block';
+        loadHistory();
+      }
+    }
+
+    async function loadQueue() {
+      if (!activeCounterId) return;
+      try {
+        const serviceFilterId = document.getElementById('select-service-filter')?.value || '';
+        const queue = await MT.api('/tickets/queue').catch(() => []);
+        let waiting = queue.filter(t => t.status === 'waiting');
+
+        // Apply service filter client-side
+        if (serviceFilterId) {
+          waiting = waiting.filter(t => String(t.service_id) === String(serviceFilterId));
+        }
+
+        // Apply type filter client-side
+        if (activeQueueFilter === 'pref') {
+          waiting = waiting.filter(t => t.is_preferential === true || t.priority === 2);
+        } else if (activeQueueFilter === 'transf') {
+          waiting = waiting.filter(t => t.transferred_from_service_id !== null || t.priority === 1);
+        } else if (activeQueueFilter === 'normal') {
+          waiting = waiting.filter(t => !t.is_preferential && !t.transferred_from_service_id && t.priority === 0);
+        }
+
+        document.getElementById('waiting-count').textContent = waiting.length;
+
+        const container = document.getElementById('waiting-list-container');
+        if (waiting.length === 0) {
+          container.innerHTML = '<p class="text-muted text-center py-4 text-xs">No hay turnos en espera para este servicio.</p>';
+          return;
+        }
+
+        container.innerHTML = waiting.map((t, idx) => `
+          <div class="waiting-item-card" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 2px 6px rgba(0,0,0,0.03);">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="background:#e0f2fe; color:#0284c7; font-weight:800; font-size:13px; width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                #${idx + 1}
+              </div>
+              <div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <strong style="font-size:17px; font-weight:800; color:${t.is_preferential ? '#d97706' : '#0f172a'};">${t.number}</strong>
+                  ${t.is_preferential ? `<span class="badge-pref"><i class="fa-solid fa-wheelchair"></i> ${t.preferential_reason || 'Pref.'}</span>` : ''}
+                  ${t.transferred_from_service_id ? `<span class="badge-transf"><i class="fa-solid fa-arrow-right-arrow-left"></i> Derivado</span>` : ''}
+                </div>
+                ${t.client_name ? `<div style="font-size:13px; font-weight:700; color:#0f172a; margin-top:2px;"><i class="fa-solid fa-user text-muted" style="font-size:11px;"></i> ${t.client_name}</div>` : ''}
+                <div style="font-size:12px; color:#64748b; margin-top:2px;">
+                  <i class="fa-solid fa-tag" style="color:${t.service?.color || '#0284c7'}; font-size:10px;"></i> ${t.service?.name || 'Consulta'}
+                  <span style="opacity:0.4;">•</span> <i class="fa-solid fa-calendar-day" style="font-size:10px;"></i> ${new Date(t.created_at).toLocaleString('es-ES', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })}
+                </div>
+              </div>
+            </div>
+            <div style="display:flex; gap:6px;">
+              ${t.client_name ? `<button type="button" class="btn btn-xs btn-outline-primary" onclick="callSpecificTicket(${t.id}, 'name')" title="Llamar por nombre de usuario" style="padding:4px 8px; font-size:11px; border-radius:8px;"><i class="fa-solid fa-volume-high"></i> Por Nombre</button>` : ''}
+              <button type="button" class="btn btn-xs btn-primary" onclick="callSpecificTicket(${t.id})" style="padding:6px 12px; font-size:12px; border-radius:8px;">
+                <i class="fa-solid fa-bullhorn"></i> Llamar
+              </button>
+            </div>
+          </div>
+        `).join('');
+      } catch (e) {}
+    }
+
+    async function loadHistory() {
+      const container = document.getElementById('history-list-container');
+      if (!container) return;
+
+      try {
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const serviceFilterId = document.getElementById('select-service-filter')?.value || '';
+        let url = `/tickets?status=attending,calling,attended,absent,cancelled&date=${todayStr}`;
+        if (serviceFilterId) url += `&service_id=${serviceFilterId}`;
+
+        const list = await MT.api(url).catch(() => []);
+        document.getElementById('history-count').textContent = list.length;
+
+        if (!list || list.length === 0) {
+          container.innerHTML = '<div class="text-muted text-center py-4 text-xs">No hay historial de turnos hoy para esta área.</div>';
+          return;
+        }
+
+        container.innerHTML = list.map(t => `
+          <div class="history-item-card" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <strong style="font-size:16px; font-weight:800; color:#0f172a;">${t.number}</strong>
+                <span style="font-size:11px; padding:2px 8px; border-radius:6px; font-weight:700; ${t.status === 'absent' ? 'background:#fee2e2; color:#dc2626;' : t.status === 'attended' ? 'background:#dcfce7; color:#15803d;' : 'background:#e0f2fe; color:#0369a1;'}">
+                  ${t.status === 'absent' ? 'Ausente' : t.status === 'attended' ? 'Atendido' : 'En Atención'}
+                </span>
+              </div>
+              ${t.client_name ? `<div style="font-size:12px; font-weight:700; color:#0f172a; margin-top:2px;"><i class="fa-solid fa-user text-muted"></i> ${t.client_name}</div>` : ''}
+              <div style="font-size:11px; color:#64748b; margin-top:2px;">${t.service?.name || 'Servicio'} • <i class="fa-solid fa-calendar-day" style="font-size:10px;"></i> ${new Date(t.created_at).toLocaleString('es-ES', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })}</div>
+            </div>
+            <div style="display:flex; gap:6px;">
+              ${t.client_name ? `<button type="button" class="btn btn-xs btn-outline-primary" onclick="callSpecificTicket(${t.id}, 'name')" title="Llamar por nombre de usuario" style="padding:4px 8px; font-size:11px; border-radius:8px;"><i class="fa-solid fa-volume-high"></i> Por Nombre</button>` : ''}
+              <button type="button" class="btn btn-xs btn-outline-primary" onclick="callSpecificTicket(${t.id})" style="padding:5px 10px; font-size:11px; border-radius:8px;">
+                <i class="fa-solid fa-rotate-right"></i> Re-llamar
+              </button>
+            </div>
+          </div>
+        `).join('');
+      } catch (e) {
+        container.innerHTML = '<div class="text-muted text-center py-4 text-xs">Error cargando historial.</div>';
+      }
+    }
+
+    async function callNextTicket() {
+      if (!activeCounterId) {
+        MT.toast('Por favor selecciona un mostrador primero', 'error');
+        return;
+      }
+
+      const btn = document.getElementById('btn-call-next');
+      btn.disabled = true;
+
+      try {
+        const callByMode = document.getElementById('select-call-mode')?.value || window.MT_SETTINGS?.call_by_mode || 'name';
+        const res = await MT.api('/tickets/call-next', {
+          method: 'POST',
+          body: JSON.stringify({ counter_id: activeCounterId, callByMode })
+        });
+
+        if (res && res.ticket) {
+          currentTicket = res.ticket;
+          document.getElementById('current-ticket-num').textContent = currentTicket.number;
+          document.getElementById('current-ticket-service').textContent = currentTicket.service?.name || 'Atención';
+
+          const clientEl = document.getElementById('current-client-name');
+          if (clientEl) {
+            if (currentTicket.client_name) {
+              clientEl.textContent = `Usuario: ${currentTicket.client_name}`;
+              clientEl.style.display = 'block';
+            } else {
+              clientEl.style.display = 'none';
+            }
+          }
+
+          document.getElementById('current-badge-pref').style.display = currentTicket.is_preferential ? 'inline-flex' : 'none';
+          document.getElementById('current-badge-transf').style.display = currentTicket.transferred_from_service_id ? 'inline-flex' : 'none';
+
+          document.getElementById('btn-recall').disabled = false;
+          document.getElementById('btn-absent').disabled = false;
+          document.getElementById('btn-transfer').disabled = false;
+          document.getElementById('btn-finish').disabled = false;
+          const btnName = document.getElementById('btn-call-name');
+          if (btnName) btnName.disabled = !currentTicket.client_name;
+
+          startTimer();
+          MT.toast(`Llamando turno ${currentTicket.number} en Pantalla TV`, 'success');
+          loadQueue();
+          loadHistory();
+        } else {
+          MT.toast('No hay turnos en espera para este mostrador', 'info');
+        }
+      } catch (err) {
+        MT.toast(err.message || 'Error al llamar turno', 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function repeatCall() {
+      if (!currentTicket) return;
+
+      const btn = document.getElementById('btn-recall');
+      if (btn) btn.disabled = true;
+
+      try {
+        const callByMode = document.getElementById('select-call-mode')?.value || window.MT_SETTINGS?.call_by_mode || 'name';
+        const res = await MT.api(`/tickets/${currentTicket.id}/recall`, {
+          method: 'POST',
+          body: JSON.stringify({ counter_id: activeCounterId, callByMode })
+        });
+
+        const counterName = res?.counterName || currentTicket.counter?.name || 'Mostrador';
+        MT.toast(`Llamada repetida para turno ${currentTicket.number} en Pantalla TV (${counterName})`, 'info');
+      } catch (err) {
+        MT.toast(err.message || 'Error al repetir llamada', 'error');
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    async function callCurrentByName() {
+      if (!currentTicket) {
+        MT.toast('No hay un turno activo en atención', 'warning');
+        return;
+      }
+      if (!currentTicket.client_name) {
+        MT.toast('Este turno no tiene registrado un nombre de usuario', 'warning');
+        return;
+      }
+
+      const btn = document.getElementById('btn-call-name');
+      if (btn) btn.disabled = true;
+
+      try {
+        const res = await MT.api(`/tickets/${currentTicket.id}/recall`, {
+          method: 'POST',
+          body: JSON.stringify({ counter_id: activeCounterId, callByMode: 'name' })
+        });
+
+        const counterName = res?.counterName || currentTicket.counter?.name || 'Mostrador';
+        MT.toast(`Llamando por nombre a ${currentTicket.client_name} en Pantalla TV (${counterName})`, 'success');
+      } catch (err) {
+        MT.toast(err.message || 'Error al llamar por nombre', 'error');
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    function openTransferModal() {
+      if (!currentTicket) return;
+      const modal = document.getElementById('transfer-modal');
+      modal.classList.add('open');
+      modal.style.display = 'flex';
+    }
+
+    function closeTransferModal() {
+      const modal = document.getElementById('transfer-modal');
+      modal.classList.remove('open');
+      modal.style.display = 'none';
+    }
+
+    async function confirmTransfer() {
+      const targetServiceId = document.getElementById('transfer-service-select').value;
+      const notes = document.getElementById('transfer-notes').value;
+
+      if (!targetServiceId) {
+        MT.toast('Selecciona el área de destino', 'error');
+        return;
+      }
+
+      try {
+        await MT.api(`/tickets/${currentTicket.id}/transfer`, {
+          method: 'POST',
+          body: JSON.stringify({ to_service_id: targetServiceId, notes })
+        });
+
+        MT.toast(`Turno ${currentTicket.number} derivado exitosamente`, 'success');
+        closeTransferModal();
+        resetCurrentTicket();
+        loadQueue();
+        loadHistory();
+      } catch (e) {
+        MT.toast(e.message || 'Error al derivar turno', 'error');
+      }
+    }
+
+    async function finishTicket() {
+      if (!currentTicket) return;
+      try {
+        await MT.api(`/tickets/${currentTicket.id}/finish`, {
+          method: 'POST',
+          body: JSON.stringify({ notes: 'Atención completada' })
+        });
+        MT.toast(`Turno ${currentTicket.number} finalizado`, 'success');
+        resetCurrentTicket();
+        loadQueue();
+        loadHistory();
+      } catch (err) {
+        MT.toast(err.message || 'Error al finalizar turno', 'error');
+      }
+    }
+
+    async function markAbsent() {
+      if (!currentTicket) return;
+      try {
+        await MT.api(`/tickets/${currentTicket.id}/absent`, { method: 'POST' });
+        MT.toast(`Turno ${currentTicket.number} marcado como ausente`, 'warning');
+        resetCurrentTicket();
+        loadQueue();
+        loadHistory();
+      } catch (err) {
+        MT.toast(err.message || 'Error al marcar ausente', 'error');
+      }
+    }
+
+    // Llamar un turno específico de la cola o del historial (clic en fila)
+    async function callSpecificTicket(ticketId, forcedMode = null) {
+      if (!activeCounterId) {
+        MT.toast('Por favor selecciona un mostrador primero', 'error');
+        return;
+      }
+      if (currentTicket && currentTicket.id !== ticketId) {
+        MT.toast('Ya hay un turno en atención. Finaliza o marca como ausente primero.', 'warning');
+        return;
+      }
+
+      try {
+        const callByMode = forcedMode || document.getElementById('select-call-mode')?.value || window.MT_SETTINGS?.call_by_mode || 'name';
+        const res = await MT.api('/tickets/call-next', {
+          method: 'POST',
+          body: JSON.stringify({ counter_id: activeCounterId, ticket_id: ticketId, callByMode })
+        });
+
+        if (res && res.ticket) {
+          currentTicket = res.ticket;
+          document.getElementById('current-ticket-num').textContent = currentTicket.number;
+          document.getElementById('current-ticket-service').textContent = currentTicket.service?.name || 'Atención';
+
+          const clientEl = document.getElementById('current-client-name');
+          if (clientEl) {
+            if (currentTicket.client_name) {
+              clientEl.textContent = `Usuario: ${currentTicket.client_name}`;
+              clientEl.style.display = 'block';
+            } else {
+              clientEl.style.display = 'none';
+            }
+          }
+
+          document.getElementById('current-badge-pref').style.display = currentTicket.is_preferential ? 'inline-flex' : 'none';
+          document.getElementById('current-badge-transf').style.display = currentTicket.transferred_from_service_id ? 'inline-flex' : 'none';
+          document.getElementById('btn-recall').disabled = false;
+          document.getElementById('btn-absent').disabled = false;
+          document.getElementById('btn-transfer').disabled = false;
+          document.getElementById('btn-finish').disabled = false;
+          const btnName = document.getElementById('btn-call-name');
+          if (btnName) btnName.disabled = !currentTicket.client_name;
+
+          startTimer();
+          MT.toast(`Llamando turno ${currentTicket.number} en Pantalla TV`, 'success');
+          loadQueue();
+          loadHistory();
+        }
+      } catch (err) {
+        MT.toast(err.message || 'Error al llamar turno', 'error');
+      }
+    }
+
+
+    function resetCurrentTicket() {
+      currentTicket = null;
+      document.getElementById('current-ticket-num').textContent = '--';
+      document.getElementById('current-ticket-service').textContent = 'Ningún turno en atención';
+      document.getElementById('current-badge-pref').style.display = 'none';
+      document.getElementById('current-badge-transf').style.display = 'none';
+      document.getElementById('btn-recall').disabled = true;
+      document.getElementById('btn-absent').disabled = true;
+      document.getElementById('btn-transfer').disabled = true;
+      document.getElementById('btn-finish').disabled = true;
+      const btnName = document.getElementById('btn-call-name');
+      if (btnName) btnName.disabled = true;
+      stopTimer();
+    }
+
+    function startTimer() {
+      stopTimer();
+      timerSeconds = 0;
+      timerInterval = setInterval(() => {
+        timerSeconds++;
+        const mins = String(Math.floor(timerSeconds / 60)).padStart(2, '0');
+        const secs = String(timerSeconds % 60).padStart(2, '0');
+        document.getElementById('elapsed-time').textContent = `${mins}:${secs}`;
+      }, 1000);
+    }
+
+    function stopTimer() {
+      if (timerInterval) clearInterval(timerInterval);
+      document.getElementById('elapsed-time').textContent = '00:00';
+    }
+  </script>
+</body>
+</html>

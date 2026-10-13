@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi turno — Anuncios en Pantalla</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="styles.css?v=2.0">
+  <style>
+    .announcements-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    @media (max-width: 900px) {
+      .announcements-grid { grid-template-columns: 1fr; }
+    }
+    .announcement-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 20px;
+      position: relative;
+      transition: all 0.2s;
+    }
+    .announcement-card.inactive {
+      opacity: 0.6;
+      background: #f8fafc;
+    }
+    .announcement-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 6px;
+    }
+    .announcement-body {
+      font-size: 14px;
+      color: #475569;
+      margin-bottom: 14px;
+      line-height: 1.5;
+    }
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    .modal-card {
+      background: #ffffff;
+      border-radius: 20px;
+      max-width: 520px;
+      width: 90%;
+      padding: 28px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+    }
+  </style>
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <div id="sidebar-container"></div>
+
+    <main class="app-main">
+      <div id="topbar-container"></div>
+
+      <div class="content-body">
+        <div class="card p-4 mb-4 flex-between" style="flex-wrap:wrap; gap:16px;">
+          <div class="flex-align gap-3">
+            <i class="fa-solid fa-scroll text-primary font-24"></i>
+            <div>
+              <h3 class="mb-0">Anuncios en Pantalla Pública</h3>
+              <p class="text-muted text-sm mb-0">Gestión de mensajes y avisos mostrados en la cinta inferior de la TV</p>
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="openCreateModal()"><i class="fa-solid fa-plus"></i> Nuevo Anuncio</button>
+        </div>
+
+        <div class="announcements-grid" id="announcements-container">
+          <div class="text-muted p-4" style="grid-column:1/-1;"><i class="fa-solid fa-spinner fa-spin"></i> Cargando anuncios...</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal Crear / Editar Anuncio -->
+  <div class="modal-overlay" id="announcement-modal" onclick="if(event.target===this) closeModal()">
+    <div class="modal-card">
+      <div class="flex-between mb-3">
+        <h3 id="modal-title"><i class="fa-solid fa-scroll text-primary"></i> Crear Anuncio</h3>
+        <button style="border:none; background:none; font-size:20px; cursor:pointer;" onclick="closeModal()">✕</button>
+      </div>
+
+      <input type="hidden" id="announcement-id">
+
+      <div class="form-group mb-3">
+        <label class="form-label" for="ann-title">Título / Cabecera:</label>
+        <input type="text" id="ann-title" class="form-input" placeholder="Ej: AVISO IMPORTANTE">
+      </div>
+
+      <div class="form-group mb-3">
+        <label class="form-label" for="ann-body">Mensaje / Contenido:</label>
+        <textarea id="ann-body" class="form-input" rows="3" placeholder="Ej: Recuerde presentar su cédula o documento de identidad antes de pasar a consulta."></textarea>
+      </div>
+
+      <!-- Multimedia Slide for TV Display Carousel -->
+      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:14px; margin-bottom:16px;">
+        <label class="form-label text-sm" style="font-weight:700; color:#0284c7; margin-bottom:8px;">
+          <i class="fa-solid fa-photo-film"></i> Contenido Multimedia para Pantalla TV
+        </label>
+
+        <div class="form-group mb-2">
+          <label class="form-label text-xs" for="ann-media-url">URL de Imagen o Video (Opcional):</label>
+          <input type="text" id="ann-media-url" class="form-input" placeholder="https://... (JPG, PNG, GIF o MP4)">
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+          <div class="form-group mb-0">
+            <label class="form-label text-xs" for="ann-media-type">Tipo de Contenido:</label>
+            <select id="ann-media-type" class="form-input">
+              <option value="image">Imagen / Diapositiva</option>
+              <option value="video">Video MP4</option>
+              <option value="text">Solo Texto / Tarjeta Informativa</option>
+            </select>
+          </div>
+          <div class="form-group mb-0">
+            <label class="form-label text-xs" for="ann-duration">Tiempo de Exposición (segundos):</label>
+            <input type="number" id="ann-duration" class="form-input" value="15" min="5" max="300" placeholder="Ej: 15">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group mb-4 flex-align gap-2">
+        <input type="checkbox" id="ann-active" checked style="width:18px; height:18px; cursor:pointer;">
+        <label class="form-label mb-0" for="ann-active" style="cursor:pointer;">Mostrar activo en pantalla pública</label>
+      </div>
+
+      <div class="flex-between">
+        <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveAnnouncement()"><i class="fa-solid fa-check"></i> Guardar Anuncio</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="app.js"></script>
+  <script>
+    let announcements = [];
+
+    document.addEventListener('DOMContentLoaded', () => {
+      MT.renderSidebar('announcements');
+      MT.renderTopbar('Anuncios en Pantalla', 'Administración del cintillo de noticias');
+      loadAnnouncements();
+
+      if (MT.socket) {
+        MT.socket.on('announcement:update', () => loadAnnouncements());
+      }
+    });
+
+    async function loadAnnouncements() {
+      try {
+        announcements = await MT.api('/announcements').catch(() => []);
+        renderAnnouncements(announcements);
+      } catch (err) {
+        console.error('Error cargando anuncios:', err);
+      }
+    }
+
+    function renderAnnouncements(list) {
+      const container = document.getElementById('announcements-container');
+      if (!list || list.length === 0) {
+        container.innerHTML = '<div class="text-muted p-4" style="grid-column:1/-1;">No hay anuncios registrados. Haz clic en "Nuevo Anuncio" para publicar un mensaje.</div>';
+        return;
+      }
+
+      container.innerHTML = list.map(a => `
+        <div class="announcement-card ${a.active ? '' : 'inactive'}">
+          <div class="flex-between mb-2">
+            <span class="badge-status-${a.active ? 'attending' : 'cancelled'}">
+              <i class="fa-solid fa-${a.active ? 'eye' : 'eye-slash'}"></i> ${a.active ? 'Activo' : 'Inactivo'}
+            </span>
+            <small class="text-muted"><i class="fa-solid fa-clock"></i> ${a.duration_seconds || 15}s</small>
+          </div>
+          <div class="announcement-title">${a.title}</div>
+          <div class="announcement-body">${a.body}</div>
+          ${a.media_url ? `<div style="font-size:12px; color:#0284c7; margin-bottom:12px; font-weight:700;"><i class="fa-solid fa-${a.media_type === 'video' ? 'video' : 'image'}"></i> Adjunto: ${a.media_type === 'video' ? 'Video' : 'Imagen'} (${a.media_url.slice(0,35)}...)</div>` : ''}
+          <div class="flex-align gap-2">
+            <button class="btn btn-xs btn-secondary" onclick="openEditModal(${a.id})"><i class="fa-solid fa-pen"></i> Editar</button>
+            <button class="btn btn-xs btn-danger" onclick="deleteAnnouncement(${a.id})"><i class="fa-solid fa-trash"></i> Eliminar</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function openCreateModal() {
+      document.getElementById('announcement-id').value = '';
+      document.getElementById('modal-title').innerHTML = '<i class="fa-solid fa-scroll text-primary"></i> Crear Anuncio';
+      document.getElementById('ann-title').value = '';
+      document.getElementById('ann-body').value = '';
+      document.getElementById('ann-media-url').value = '';
+      document.getElementById('ann-media-type').value = 'image';
+      document.getElementById('ann-duration').value = '15';
+      document.getElementById('ann-active').checked = true;
+      document.getElementById('announcement-modal').style.display = 'flex';
+    }
+
+    function openEditModal(id) {
+      const ann = announcements.find(a => a.id === id);
+      if (!ann) return;
+      document.getElementById('announcement-id').value = ann.id;
+      document.getElementById('modal-title').innerHTML = '<i class="fa-solid fa-pen text-primary"></i> Editar Anuncio';
+      document.getElementById('ann-title').value = ann.title;
+      document.getElementById('ann-body').value = ann.body;
+      document.getElementById('ann-media-url').value = ann.media_url || '';
+      document.getElementById('ann-media-type').value = ann.media_type || 'image';
+      document.getElementById('ann-duration').value = ann.duration_seconds || 15;
+      document.getElementById('ann-active').checked = ann.active;
+      document.getElementById('announcement-modal').style.display = 'flex';
+    }
+
+    function closeModal() {
+      document.getElementById('announcement-modal').style.display = 'none';
+    }
+
+    async function saveAnnouncement() {
+      const id = document.getElementById('announcement-id').value;
+      const title = document.getElementById('ann-title').value.trim();
+      const body = document.getElementById('ann-body').value.trim();
+      const media_url = document.getElementById('ann-media-url').value.trim();
+      const media_type = document.getElementById('ann-media-type').value;
+      const duration_seconds = parseInt(document.getElementById('ann-duration').value, 10) || 15;
+      const active = document.getElementById('ann-active').checked;
+
+      if (!title || !body) {
+        MT.toast('Título y mensaje son requeridos', 'error');
+        return;
+      }
+
+      const payload = { title, body, active, media_url, media_type, duration_seconds };
+
+      try {
+        if (id) {
+          await MT.api(`/announcements/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(payload)
+          });
+          MT.toast('Anuncio actualizado', 'success');
+        } else {
+          await MT.api('/announcements', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+          });
+          MT.toast('Anuncio creado exitosamente', 'success');
+        }
+        closeModal();
+        loadAnnouncements();
+      } catch (err) {
+        MT.toast(err.message || 'Error al guardar anuncio', 'error');
+      }
+    }
+
+    async function deleteAnnouncement(id) {
+      if (!confirm('¿Desea eliminar este anuncio?')) return;
+      try {
+        await MT.api(`/announcements/${id}`, { method: 'DELETE' });
+        MT.toast('Anuncio eliminado', 'info');
+        loadAnnouncements();
+      } catch (err) {
+        MT.toast(err.message || 'Error al eliminar', 'error');
+      }
+    }
+  </script>
+</body>
+</html>

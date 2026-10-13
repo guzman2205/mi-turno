@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi turno — Quiosco de Autoservicio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: radial-gradient(circle at 50% 20%, #0d2248 0%, #0a1628 100%);
+      color: #ffffff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+    }
+
+    /* Kiosk Header */
+    .kiosk-header {
+      padding: 24px 48px;
+      text-align: center;
+      background: rgba(13, 31, 60, 0.6);
+      backdrop-filter: blur(12px);
+      border-bottom: 2px solid rgba(56, 189, 248, 0.2);
+    }
+    .kiosk-brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 4px;
+    }
+    .brand-icon { font-size: 34px; color: #38bdf8; }
+    .kiosk-brand h1 { font-size: 34px; font-weight: 800; }
+    .kiosk-brand h1 span { color: #38bdf8; }
+    .kiosk-subtitle {
+      font-family: 'Inter', sans-serif;
+      font-size: 16px;
+      color: #cbd5e1;
+    }
+
+    /* Preferential Toggle Banner */
+    .preferential-banner-wrap {
+      max-width: 1000px;
+      margin: 20px auto 0;
+      padding: 0 24px;
+      width: 100%;
+    }
+    .preferential-banner {
+      background: rgba(245, 158, 11, 0.12);
+      border: 2px dashed rgba(245, 158, 11, 0.5);
+      border-radius: 20px;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      transition: all 0.25s ease;
+      cursor: pointer;
+    }
+    .preferential-banner.active {
+      background: rgba(245, 158, 11, 0.25);
+      border: 2px solid #f59e0b;
+      box-shadow: 0 0 25px rgba(245, 158, 11, 0.35);
+    }
+    .pref-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .pref-icon {
+      width: 48px; height: 48px;
+      border-radius: 12px;
+      background: #f59e0b;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+    .pref-text strong {
+      font-size: 18px;
+      color: #fbbf24;
+      display: block;
+    }
+    .pref-text span {
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      color: #cbd5e1;
+    }
+    .pref-toggle-btn {
+      background: #f59e0b;
+      color: #0f172a;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+    .preferential-banner.active .pref-toggle-btn {
+      background: #ef4444;
+      color: #ffffff;
+    }
+
+    /* Reason Selector */
+    .pref-reasons {
+      display: none;
+      gap: 10px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+    .preferential-banner.active + .pref-reasons {
+      display: flex;
+    }
+    .reason-chip {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1.5px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: 30px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .reason-chip.selected {
+      background: #f59e0b;
+      color: #0f172a;
+      border-color: #f59e0b;
+    }
+
+    /* Services Grid */
+    .kiosk-body {
+      flex: 1;
+      padding: 30px 48px;
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .prompt-text {
+      text-align: center;
+      font-size: 22px;
+      font-weight: 700;
+      color: #94a3b8;
+      margin-bottom: 24px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+    }
+    .service-touch-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      border-radius: 24px;
+      padding: 30px 24px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      text-align: left;
+    }
+    .service-touch-card:hover, .service-touch-card:active {
+      transform: translateY(-4px) scale(1.02);
+      border-color: #38bdf8;
+      background: rgba(56, 189, 248, 0.12);
+      box-shadow: 0 15px 35px rgba(56, 189, 248, 0.25);
+    }
+    .service-card-icon {
+      width: 70px;
+      height: 70px;
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      color: white;
+      flex-shrink: 0;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+    }
+    .service-card-info h2 {
+      font-size: 24px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+    .service-card-info p {
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      color: #94a3b8;
+    }
+
+    /* Ticket Receipt Modal */
+    .receipt-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(6, 13, 26, 0.85);
+      backdrop-filter: blur(12px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+    .receipt-card {
+      background: #ffffff;
+      color: #0f172a;
+      width: 100%;
+      max-width: 420px;
+      border-radius: 24px;
+      padding: 36px;
+      text-align: center;
+      position: relative;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.5);
+      animation: slideUp 0.35s ease;
+    }
+    @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .receipt-header h3 { font-size: 24px; font-weight: 800; color: #0f172a; }
+    .receipt-header p { font-family: 'Inter', sans-serif; font-size: 13px; color: #64748b; margin-top: 4px; }
+    .pref-badge-ticket {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #fef3c7;
+      color: #b45309;
+      font-family: 'Inter', sans-serif;
+      font-weight: 800;
+      font-size: 13px;
+      padding: 4px 14px;
+      border-radius: 20px;
+      margin-top: 8px;
+    }
+    .receipt-divider { border-top: 2px dashed #cbd5e1; margin: 20px 0; }
+    .receipt-num-label { font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; }
+    .receipt-num { font-size: 72px; font-weight: 900; color: #0284c7; line-height: 1.1; margin: 8px 0; }
+    .receipt-num.is-pref { color: #d97706; }
+    .receipt-service { font-size: 20px; font-weight: 700; color: #334155; }
+    .receipt-time { font-family: 'Inter', sans-serif; font-size: 13px; color: #64748b; margin-top: 6px; }
+    .btn-print-action {
+      margin-top: 20px;
+      width: 100%;
+      padding: 14px;
+      background: #0284c7;
+      color: #ffffff;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.2s;
+    }
+    .btn-print-action:hover { background: #0369a1; }
+    /* Footer Area */
+    .kiosk-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 48px;
+      background: rgba(13, 31, 60, 0.5);
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+    .footer-note { color: #64748b; font-size: 13px; font-family: 'Inter', sans-serif; }
+    .btn-reprint {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(56, 189, 248, 0.12);
+      border: 1.5px solid rgba(56, 189, 248, 0.35);
+      color: #38bdf8;
+      padding: 10px 20px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.2s;
+    }
+    .btn-reprint:hover { background: rgba(56, 189, 248, 0.25); border-color: #38bdf8; }
+
+    /* Reprint Modal */
+    .reprint-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(6, 13, 26, 0.9);
+      backdrop-filter: blur(14px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1100;
+      padding: 20px;
+    }
+    .reprint-card {
+      background: #0d1f3c;
+      border: 1.5px solid rgba(56, 189, 248, 0.25);
+      border-radius: 24px;
+      padding: 40px;
+      width: 100%;
+      max-width: 480px;
+      text-align: center;
+      position: relative;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.6);
+      animation: slideUp 0.3s ease;
+    }
+    .reprint-card h2 { font-size: 26px; font-weight: 800; color: #f1f5f9; margin-bottom: 6px; }
+    .reprint-card p { font-family: 'Inter', sans-serif; font-size: 14px; color: #94a3b8; margin-bottom: 28px; }
+    .reprint-search-wrap {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .reprint-input {
+      flex: 1;
+      background: rgba(255,255,255,0.06);
+      border: 1.5px solid rgba(56, 189, 248, 0.3);
+      color: #f1f5f9;
+      padding: 14px 16px;
+      border-radius: 12px;
+      font-size: 18px;
+      font-weight: 700;
+      font-family: 'Outfit', sans-serif;
+      text-transform: uppercase;
+      text-align: center;
+      letter-spacing: 2px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .reprint-input:focus { border-color: #38bdf8; }
+    .reprint-input::placeholder { color: #475569; font-size: 14px; font-weight: 400; letter-spacing: 0; }
+    .btn-search-reprint {
+      background: #38bdf8;
+      color: #0f172a;
+      border: none;
+      padding: 14px 20px;
+      border-radius: 12px;
+      font-size: 18px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-search-reprint:hover { background: #0ea5e9; }
+    .reprint-result {
+      display: none;
+      background: rgba(255,255,255,0.05);
+      border: 1.5px solid rgba(56, 189, 248, 0.2);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .reprint-result .r-num { font-size: 52px; font-weight: 900; color: #38bdf8; line-height: 1; }
+    .reprint-result .r-service { font-size: 16px; font-weight: 700; color: #e2e8f0; margin-top: 4px; }
+    .reprint-result .r-date { font-family: 'Inter', sans-serif; font-size: 12px; color: #64748b; margin-top: 4px; }
+    .reprint-result.is-pref .r-num { color: #f59e0b; }
+    .reprint-error { color: #f87171; font-family: 'Inter', sans-serif; font-size: 13px; display: none; margin-bottom: 12px; }
+    .reprint-actions { display: flex; gap: 10px; }
+    .btn-do-reprint {
+      flex: 1;
+      background: #0284c7;
+      color: #fff;
+      border: none;
+      padding: 13px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background 0.2s;
+    }
+    .btn-do-reprint:hover { background: #0369a1; }
+    .btn-reprint-cancel {
+      background: rgba(255,255,255,0.06);
+      color: #94a3b8;
+      border: 1.5px solid rgba(255,255,255,0.12);
+      padding: 13px 20px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: background 0.2s;
+    }
+    .btn-reprint-cancel:hover { background: rgba(255,255,255,0.1); }
+    .btn-last-issued {
+      width: 100%;
+      background: transparent;
+      border: 1.5px dashed rgba(56,189,248,0.3);
+      color: #38bdf8;
+      padding: 11px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      margin-bottom: 16px;
+      transition: all 0.2s;
+    }
+    .btn-last-issued:hover { background: rgba(56,189,248,0.08); border-color: #38bdf8; }
+
+    /* Estilos Nativos de Impresión Térmica POS (80mm / 58mm) */
+    @media print {
+      body * { visibility: hidden !important; }
+      #printable-ticket, #printable-ticket * { visibility: visible !important; }
+      #printable-ticket {
+        position: fixed !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 76mm !important;
+        margin: 0 auto !important;
+        padding: 10px 5px !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+        text-align: center !important;
+        display: block !important;
+        font-family: monospace, sans-serif !important;
+      }
+      .print-hospital { font-size: 16px; font-weight: 900; }
+      .print-subtitle { font-size: 11px; margin-bottom: 8px; }
+      .print-line { border-bottom: 1px dashed #000; margin: 8px 0; }
+      .print-label { font-size: 12px; font-weight: bold; }
+      .print-number { font-size: 42px; font-weight: 900; margin: 6px 0; }
+      .print-service { font-size: 16px; font-weight: 800; }
+      .print-pref { font-size: 12px; font-weight: bold; margin-top: 4px; }
+      .print-date { font-size: 11px; margin-top: 8px; }
+      .print-footer { font-size: 10px; margin-top: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="kiosk-header">
+    <div class="kiosk-brand">
+      <i class="fa-solid fa-layer-group brand-icon"></i>
+      <h1>Mi <span>turno</span></h1>
+    </div>
+    <div class="kiosk-subtitle" id="kiosk-company-title">Sistema de Gestión y Atención — Quiosco de Turnos</div>
+  </header>
+
+  <!-- STEP 1: Registration Screen (Identificación del Usuario + Atención Preferencial) -->
+  <div id="kiosk-step-1" class="kiosk-step-container">
+    <main class="kiosk-body" style="max-width: 800px; margin: 0 auto; padding-top:20px;">
+      <div class="prompt-text">
+        <i class="fa-solid fa-user-pen"></i> PASO 1: REGISTRO DE USUARIO
+      </div>
+
+      <!-- Selección de Tipo de Identificación -->
+      <div style="background: rgba(255,255,255,0.04); border: 1.5px solid rgba(56,189,248,0.25); border-radius: 20px; padding: 24px; margin-bottom: 24px;">
+        <label style="display: block; font-size: 15px; font-weight: 700; color: #38bdf8; margin-bottom: 12px;">
+          <i class="fa-solid fa-id-card"></i> ¿Cómo se identificará el usuario?
+        </label>
+        <div style="display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap;">
+          <button type="button" class="btn btn-xs id-type-btn active" id="id-type-name" onclick="setIdType('name')"
+            style="flex: 1; min-width: 140px; padding: 12px; font-size: 14px; font-weight: 700; border-radius: 12px; background: #0284c7; color: #fff; border: 1px solid #38bdf8; cursor: pointer;">
+            <i class="fa-solid fa-user"></i> Por Nombre
+          </button>
+          <button type="button" class="btn btn-xs id-type-btn" id="id-type-cedula" onclick="setIdType('cedula')"
+            style="flex: 1; min-width: 140px; padding: 12px; font-size: 14px; font-weight: 700; border-radius: 12px; background: rgba(255,255,255,0.06); color: #94a3b8; border: 1px solid rgba(255,255,255,0.15); cursor: pointer;">
+            <i class="fa-solid fa-address-card"></i> Por Cédula / Doc.
+          </button>
+          <button type="button" class="btn btn-xs id-type-btn" id="id-type-phone" onclick="setIdType('phone')"
+            style="flex: 1; min-width: 140px; padding: 12px; font-size: 14px; font-weight: 700; border-radius: 12px; background: rgba(255,255,255,0.06); color: #94a3b8; border: 1px solid rgba(255,255,255,0.15); cursor: pointer;">
+            <i class="fa-solid fa-phone"></i> Por Teléfono
+          </button>
+        </div>
+
+        <label for="kiosk-client-name" id="id-input-label" style="display: block; font-size: 15px; font-weight: 700; color: #cbd5e1; margin-bottom: 8px;">
+          <i class="fa-solid fa-user"></i> Nombre Completo del Usuario
+        </label>
+        <div style="position: relative;">
+          <input type="text" id="kiosk-client-name" class="reprint-input" placeholder="Ingrese su nombre y apellido (Ej: Juan Pérez)"
+            style="width: 100%; padding: 16px 20px; text-align: left; font-size: 18px; border-radius: 14px; background: rgba(0,0,0,0.25); color: #fff; border: 1.5px solid rgba(56,189,248,0.4); outline: none;">
+        </div>
+      </div>
+
+      <!-- Turnos Preferenciales Toggle -->
+      <div class="preferential-banner-wrap" style="padding:0; margin-bottom: 28px;">
+        <div class="preferential-banner" id="pref-banner" onclick="togglePreferential()">
+          <div class="pref-left">
+            <div class="pref-icon"><i class="fa-solid fa-wheelchair"></i></div>
+            <div class="pref-text">
+              <strong>¿Requiere Atención Preferencial?</strong>
+              <span>Discapacidad, adultos mayores, embarazadas o condición prioritaria</span>
+            </div>
+          </div>
+          <button type="button" class="pref-toggle-btn" id="pref-btn">
+            <i class="fa-solid fa-check"></i> <span>Activar Preferencial</span>
+          </button>
+        </div>
+
+        <div class="pref-reasons" id="pref-reasons">
+          <div class="reason-chip selected" onclick="selectReason('Discapacidad')"><i class="fa-solid fa-wheelchair"></i> Discapacidad</div>
+          <div class="reason-chip" onclick="selectReason('Adulto Mayor')"><i class="fa-solid fa-person-cane"></i> Adulto Mayor</div>
+          <div class="reason-chip" onclick="selectReason('Embarazo')"><i class="fa-solid fa-person-pregnant"></i> Embarazada</div>
+          <div class="reason-chip" onclick="selectReason('Condición Especial')"><i class="fa-solid fa-crutch"></i> Condición Especial</div>
+        </div>
+      </div>
+
+      <!-- Botón Continuar a Paso 2 -->
+      <button type="button" class="btn-step-next" onclick="goToStep2()"
+        style="width:100%; padding:20px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color:#ffffff; border:none; border-radius:18px; font-size:20px; font-weight:800; font-family:'Outfit',sans-serif; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:12px; box-shadow: 0 10px 25px rgba(2,132,199,0.4); transition: transform 0.2s;">
+        <span>Siguiente: Seleccionar Área de Servicio</span> <i class="fa-solid fa-arrow-right"></i>
+      </button>
+    </main>
+  </div>
+
+  <!-- STEP 2: Selection Screen (Área de Servicio) -->
+  <div id="kiosk-step-2" class="kiosk-step-container" style="display: none;">
+    <!-- Patient Summary Banner -->
+    <div style="max-width: 1000px; margin: 16px auto 0; padding: 0 24px;">
+      <div style="background: rgba(13, 31, 60, 0.8); border: 1.5px solid rgba(56, 189, 248, 0.3); border-radius: 16px; padding: 12px 24px; display: flex; align-items: center; justify-content: space-between;">
+        <div style="display:flex; align-items:center; gap:16px;">
+          <span style="font-size:16px; font-weight:700; color:#cbd5e1;">
+            <i class="fa-solid fa-user" style="color:#38bdf8;"></i> Usuario: <strong id="step2-summary-name" style="color:#fff;">--</strong>
+          </span>
+          <span id="step2-summary-pref" style="font-size:13px; font-weight:700;"></span>
+        </div>
+        <button type="button" onclick="goToStep1()" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#38bdf8; padding:6px 14px; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer;">
+          <i class="fa-solid fa-pen"></i> Cambiar Datos
+        </button>
+      </div>
+    </div>
+
+    <main class="kiosk-body">
+      <div class="prompt-text">
+        <i class="fa-solid fa-hand-pointer"></i> PASO 2: SELECCIONE EL ÁREA DE SERVICIO REQUERIDA
+      </div>
+
+      <div class="services-grid" id="services-grid">
+        <div class="loading-state text-center" style="grid-column: 1/-1; padding: 40px; font-size: 20px;">
+          <i class="fa-solid fa-spinner fa-spin"></i> Cargando áreas de servicio...
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <footer class="kiosk-footer">
+    <span class="footer-note"><i class="fa-solid fa-circle-info"></i> Si requiere asistencia, acérquese al módulo de orientación.</span>
+    <div style="display:flex; gap:10px;">
+      <button class="btn-reprint" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.4); color: #34d399;" onclick="openAppointmentModal()">
+        <i class="fa-solid fa-calendar-check"></i> Tengo una Cita
+      </button>
+      <button class="btn-reprint" onclick="openReprintModal()">
+        <i class="fa-solid fa-rotate-right"></i> Reimprimir Turno
+      </button>
+    </div>
+  </footer>
+
+  <!-- Ticket Modal Interactivo en Pantalla -->
+  <div class="receipt-modal" id="receipt-modal">
+    <div class="receipt-card">
+      <div class="receipt-header">
+        <h3>Mi turno</h3>
+        <p>Centro de Atención Médica Integral</p>
+        <div class="pref-badge-ticket" id="modal-pref-badge" style="display:none;">
+          <i class="fa-solid fa-wheelchair"></i> <span id="modal-pref-reason">Turno Preferencial</span>
+        </div>
+      </div>
+      <div class="receipt-divider"></div>
+      <div class="receipt-num-label">Su Turno Es</div>
+      <div class="receipt-num" id="receipt-num">--</div>
+      <div class="receipt-service" id="receipt-client-name" style="color:#0f172a; font-weight:800; display:none; margin-bottom:4px;"></div>
+      <div class="receipt-service" id="receipt-service">Servicio</div>
+      <div class="receipt-time" id="receipt-time">Fecha y hora</div>
+      <div class="receipt-eta" id="receipt-eta" style="font-family:'Inter',sans-serif; font-size:14px; color:#0284c7; font-weight:700; margin-top:6px; display:none;"></div>
+      <div class="receipt-divider"></div>
+
+      <button class="btn-print-action" onclick="printReceiptTicket()">
+        <i class="fa-solid fa-print"></i> Imprimir Ticket Térmico
+      </button>
+    </div>
+  </div>
+
+  <!-- Contenedor Oculto para Impresora Térmica POS (Solo visible al imprimir) -->
+  <div id="printable-ticket" style="display:none;">
+    <div class="print-hospital">MI TURNO</div>
+    <div class="print-subtitle">Centro de Atención Médica</div>
+    <div class="print-line"></div>
+    <div class="print-label">SU TURNO ES</div>
+    <div class="print-number" id="print-ticket-num">--</div>
+    <div class="print-service" id="print-ticket-client" style="font-weight:800; display:none;">CLIENTE: ---</div>
+    <div class="print-service" id="print-ticket-service">Servicio</div>
+    <div class="print-pref" id="print-ticket-pref" style="display:none;">*** ATENCIÓN PREFERENCIAL ***</div>
+    <div class="print-date" id="print-ticket-date">Fecha y Hora</div>
+    <div class="print-line"></div>
+    <div class="print-footer">Por favor espere a ser llamado en pantalla pública. ¡Gracias!</div>
+  </div>
+
+  <!-- Reprint Modal -->
+  <div class="reprint-modal" id="reprint-modal">
+    <div class="reprint-card">
+      <h2><i class="fa-solid fa-rotate-right" style="color:#38bdf8;"></i> Reimprimir Turno</h2>
+      <p style="margin-bottom:16px;">Busque por número, paciente o explore turnos por servicio</p>
+
+      <div style="display:flex; gap:8px; margin-bottom:16px; background:rgba(255,255,255,0.05); padding:4px; border-radius:12px;">
+        <button type="button" class="btn btn-xs" id="tab-reprint-search" style="flex:1; background:#0284c7; color:#fff;" onclick="switchReprintTab('search')">
+          <i class="fa-solid fa-magnifying-glass"></i> Buscar Código / Nombre
+        </button>
+        <button type="button" class="btn btn-xs" id="tab-reprint-browse" style="flex:1; background:transparent; color:#94a3b8;" onclick="switchReprintTab('browse')">
+          <i class="fa-solid fa-list-check"></i> Turnos por Servicio
+        </button>
+      </div>
+
+      <!-- Tab 1: Buscar -->
+      <div id="reprint-tab-search-content">
+        <button class="btn-last-issued" id="btn-load-last" onclick="loadLastIssued()">
+          <i class="fa-solid fa-clock-rotate-left"></i> Cargar mi último turno emitido hoy
+        </button>
+
+        <div class="reprint-search-wrap">
+          <input type="text" id="reprint-query" class="reprint-input" placeholder="Ej: A-001 o Nombre de paciente" maxlength="30"
+            oninput="clearReprintResult()" onkeydown="if(event.key==='Enter') searchForReprint()">
+          <button class="btn-search-reprint" onclick="searchForReprint()">
+            <i class="fa-solid fa-magnifying-glass"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Tab 2: Explorar por Servicio -->
+      <div id="reprint-tab-browse-content" style="display:none;">
+        <select id="reprint-service-select" class="reprint-input" style="width:100%; text-align:left; font-size:14px; margin-bottom:12px; padding:10px 14px;" onchange="loadTodayTicketsByService()">
+          <option value="">-- Todos los servicios --</option>
+        </select>
+        <div id="reprint-service-list" style="max-height:200px; overflow-y:auto; text-align:left; display:flex; flex-direction:column; gap:6px;">
+          <div class="text-muted text-center text-xs py-3">Selecciona un servicio para ver los turnos emitidos hoy</div>
+        </div>
+      </div>
+
+      <div class="reprint-error" id="reprint-error" style="margin-top:10px;"></div>
+
+      <div class="reprint-result" id="reprint-result">
+        <div class="r-num" id="reprint-r-num">---</div>
+        <div class="r-service" id="reprint-r-client" style="font-size:18px; color:#fff; font-weight:800; display:none;"></div>
+        <div class="r-service" id="reprint-r-service">Servicio</div>
+        <div class="r-date" id="reprint-r-date">Fecha</div>
+      </div>
+
+      <div class="reprint-actions" style="margin-top:16px;">
+        <button class="btn-do-reprint" id="btn-do-reprint" onclick="doReprint()" style="display:none;">
+          <i class="fa-solid fa-print"></i> Imprimir
+        </button>
+        <button class="btn-reprint-cancel" onclick="closeReprintModal()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Appointment Check-In Modal -->
+  <div class="reprint-modal" id="appointment-modal">
+    <div class="reprint-card">
+      <h2><i class="fa-solid fa-calendar-check" style="color:#34d399;"></i> Confirmar Cita Programada</h2>
+      <p>Ingrese su código de confirmación de 6 dígitos (ej: X8K2M1)</p>
+
+      <div class="reprint-search-wrap">
+        <input type="text" id="appt-code-input" class="reprint-input" placeholder="Ej: X8K2M1" maxlength="8"
+          onkeydown="if(event.key==='Enter') searchAppointmentCode()">
+        <button class="btn-search-reprint" style="background:#10b981; color:#fff;" onclick="searchAppointmentCode()">
+          <i class="fa-solid fa-magnifying-glass"></i>
+        </button>
+      </div>
+
+      <div class="reprint-error" id="appt-error"></div>
+
+      <div class="reprint-result" id="appt-result">
+        <div class="r-service" id="appt-r-name" style="font-size:20px; color:#fff; font-weight:800;">Nombre del Paciente</div>
+        <div class="r-service" id="appt-r-service">Servicio</div>
+        <div class="r-date" id="appt-r-date">Fecha y Hora Programada</div>
+      </div>
+
+      <div class="reprint-actions" style="margin-top:16px;">
+        <button class="btn-do-reprint" id="btn-convert-appt" onclick="convertAppointmentToTicket()" style="display:none; background:#10b981;">
+          <i class="fa-solid fa-ticket"></i> Generar e Imprimir Turno
+        </button>
+        <button class="btn-reprint-cancel" onclick="closeAppointmentModal()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="app.js"></script>
+  <script>
+    let isProcessing = false;
+    let isPreferentialActive = false;
+    let selectedReason = 'Discapacidad';
+    let loadedServices = [];
+
+    // ── Timeout de Inactividad en Quiosco (45 segundos) ─────────────────
+    const INACTIVITY_MS = 45000;
+    let inactivityTimer = null;
+
+    function resetInactivityTimer() {
+      clearTimeout(inactivityTimer);
+      inactivityTimer = setTimeout(() => {
+        closeReceiptModal();
+        closeReprintModal();
+        closeAppointmentModal();
+        if (isPreferentialActive) togglePreferential();
+        goToStep1();
+      }, INACTIVITY_MS);
+    }
+
+    // ── Paso 1 / Paso 2 Control de Flujo ──────────────────────────────
+    let kioskCurrentStep = 1;
+    let currentIdType = 'name'; // 'name', 'cedula', 'phone'
+
+    function setIdType(type) {
+      currentIdType = type;
+      const btnName = document.getElementById('id-type-name');
+      const btnCedula = document.getElementById('id-type-cedula');
+      const btnPhone = document.getElementById('id-type-phone');
+      const label = document.getElementById('id-input-label');
+      const input = document.getElementById('kiosk-client-name');
+
+      [btnName, btnCedula, btnPhone].forEach(b => {
+        if (b) {
+          b.style.background = 'rgba(255,255,255,0.06)';
+          b.style.color = '#94a3b8';
+          b.style.borderColor = 'rgba(255,255,255,0.15)';
+        }
+      });
+
+      if (type === 'name') {
+        if (btnName) { btnName.style.background = '#0284c7'; btnName.style.color = '#fff'; btnName.style.borderColor = '#38bdf8'; }
+        if (label) label.innerHTML = '<i class="fa-solid fa-user"></i> Nombre Completo del Usuario';
+        if (input) { input.placeholder = 'Ingrese su nombre y apellido (Ej: Juan Pérez)'; input.type = 'text'; }
+      } else if (type === 'cedula') {
+        if (btnCedula) { btnCedula.style.background = '#0284c7'; btnCedula.style.color = '#fff'; btnCedula.style.borderColor = '#38bdf8'; }
+        if (label) label.innerHTML = '<i class="fa-solid fa-address-card"></i> Cédula o Documento del Usuario';
+        if (input) { input.placeholder = 'Ingrese número de cédula (Ej: 402-1234567-8)'; input.type = 'text'; }
+      } else if (type === 'phone') {
+        if (btnPhone) { btnPhone.style.background = '#0284c7'; btnPhone.style.color = '#fff'; btnPhone.style.borderColor = '#38bdf8'; }
+        if (label) label.innerHTML = '<i class="fa-solid fa-phone"></i> Número de Teléfono del Usuario';
+        if (input) { input.placeholder = 'Ingrese número telefónico (Ej: 809-555-0199)'; input.type = 'tel'; }
+      }
+      if (input) input.focus();
+    }
+
+    function goToStep1() {
+      kioskCurrentStep = 1;
+      const step1 = document.getElementById('kiosk-step-1');
+      const step2 = document.getElementById('kiosk-step-2');
+      if (step1) step1.style.display = 'block';
+      if (step2) step2.style.display = 'none';
+      const input = document.getElementById('kiosk-client-name');
+      if (input) input.value = '';
+    }
+
+    function goToStep2() {
+      const nameInput = document.getElementById('kiosk-client-name');
+      let clientName = nameInput ? nameInput.value.trim() : '';
+      if (clientName && currentIdType === 'cedula') {
+        clientName = `Cédula: ${clientName}`;
+      } else if (clientName && currentIdType === 'phone') {
+        clientName = `Tel: ${clientName}`;
+      }
+
+      // Actualizar resumen en el banner del Paso 2
+      const summaryName = document.getElementById('step2-summary-name');
+      if (summaryName) summaryName.textContent = clientName || 'Usuario Registrado';
+
+      const summaryPref = document.getElementById('step2-summary-pref');
+      if (summaryPref) {
+        if (isPreferentialActive) {
+          summaryPref.innerHTML = `<span style="color:#fbbf24; background:rgba(245,158,11,0.2); padding:4px 10px; border-radius:8px; border:1px solid #f59e0b;"><i class="fa-solid fa-wheelchair"></i> Preferencial (${selectedReason})</span>`;
+        } else {
+          summaryPref.innerHTML = `<span style="color:#cbd5e1; background:rgba(255,255,255,0.08); padding:4px 10px; border-radius:8px;"><i class="fa-solid fa-user"></i> Atención Normal</span>`;
+        }
+      }
+
+      kioskCurrentStep = 2;
+      const step1 = document.getElementById('kiosk-step-1');
+      const step2 = document.getElementById('kiosk-step-2');
+      if (step1) step1.style.display = 'none';
+      if (step2) step2.style.display = 'block';
+    }
+
+    ['click', 'touchstart', 'keydown'].forEach(evt => {
+      document.addEventListener(evt, resetInactivityTimer, { passive: true });
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadSettings();
+      loadServices();
+      resetInactivityTimer();
+      if (MT.socket) {
+        MT.socket.on('services:changed', () => loadServices());
+      }
+    });
+
+    async function loadSettings() {
+      try {
+        const s = await MT.api('/settings').catch(() => null);
+        if (s && s.company_name) {
+          const el = document.getElementById('kiosk-company-title');
+          if (el) el.textContent = `${s.company_name} — Quiosco de Turnos`;
+        }
+      } catch (e) {}
+    }
+
+    async function loadServices() {
+      try {
+        const res = await MT.api('/services?active=true');
+        if (Array.isArray(res)) {
+          const publicServices = res.filter(s => !s.type || s.type === 'service');
+          loadedServices = publicServices.length > 0 ? publicServices : res;
+          if (loadedServices.length > 0) {
+            renderServices(loadedServices);
+          } else {
+            renderNoServices();
+          }
+        } else {
+          renderFallbackServices();
+        }
+      } catch (e) {
+        renderFallbackServices();
+      }
+    }
+
+    function renderNoServices() {
+      const grid = document.getElementById('services-grid');
+      grid.innerHTML = `
+        <div class="no-services-state text-center" style="grid-column: 1/-1; padding: 60px 20px; background: rgba(255,255,255,0.03); border-radius: 20px; border: 1.5px dashed rgba(255,255,255,0.15);">
+          <i class="fa-solid fa-circle-pause" style="font-size: 56px; color: #f59e0b; margin-bottom: 16px;"></i>
+          <h2 style="font-size: 24px; font-weight: 800; color: #f8fafc; margin-bottom: 8px;">Atención Momentáneamente Suspendida</h2>
+          <p style="font-family: 'Inter', sans-serif; font-size: 15px; color: #cbd5e1; max-width: 480px; margin: 0 auto;">
+            En este momento no hay áreas de servicio activas.<br>Por favor acérquese al módulo de orientación.
+          </p>
+        </div>
+      `;
+    }
+
+    function renderServices(list) {
+      const grid = document.getElementById('services-grid');
+      grid.innerHTML = list.map(s => `
+        <div class="service-touch-card" onclick="createTicket(${s.id}, '${s.name}')">
+          <div class="service-card-icon" style="background:${s.color || '#0284c7'};">
+            <i class="fa-solid fa-${s.icon || 'briefcase'}"></i>
+          </div>
+          <div class="service-card-info">
+            <h2>${s.name}</h2>
+            <p>${s.description || 'Atención y turnos correlativos'}</p>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderFallbackServices() {
+      renderServices([
+        { id: 1, name: 'Atención al Cliente', color: '#0284c7', icon: 'headset', description: 'Consultas y asesoría general' },
+        { id: 2, name: 'Caja y Facturación', color: '#10b981', icon: 'cash-register', description: 'Cobros, facturación y pagos' },
+        { id: 3, name: 'Trámites y Radicación', color: '#8b5cf6', icon: 'file-lines', description: 'Recepción y gestión de documentos' },
+        { id: 4, name: 'Soporte y Asistencia', color: '#f59e0b', icon: 'wrench', description: 'Asistencia técnica personalizada' }
+      ]);
+    }
+
+    function togglePreferential() {
+      isPreferentialActive = !isPreferentialActive;
+      const banner = document.getElementById('pref-banner');
+      const btn = document.getElementById('pref-btn');
+
+      if (isPreferentialActive) {
+        banner.classList.add('active');
+        btn.innerHTML = '<i class="fa-solid fa-xmark"></i> Desactivar';
+      } else {
+        banner.classList.remove('active');
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> Activar Preferencial';
+      }
+    }
+
+    function selectReason(reason) {
+      selectedReason = reason;
+      document.querySelectorAll('.reason-chip').forEach(c => {
+        c.classList.toggle('selected', c.textContent.includes(reason));
+      });
+    }
+
+    async function createTicket(serviceId, serviceName) {
+      if (isProcessing) return;
+      isProcessing = true;
+
+      try {
+        const clientName = document.getElementById('kiosk-client-name')?.value.trim() || null;
+        const payload = {
+          service_id: serviceId,
+          client_name: clientName,
+          is_preferential: isPreferentialActive,
+          preferential_reason: isPreferentialActive ? selectedReason : null
+        };
+
+        const res = await MT.api('/tickets/create', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+
+        // Backend returns ticket directly
+        if (res && res.number) {
+          showReceipt(res.number, res.service?.name || serviceName, res.is_preferential, res.preferential_reason, res.eta, res.client_name);
+        } else if (res && res.ticket) {
+          showReceipt(res.ticket.number, res.ticket.service?.name || serviceName, res.ticket.is_preferential, res.ticket.preferential_reason, res.ticket.eta, res.ticket.client_name);
+        } else {
+          throw new Error('Respuesta inesperada del servidor');
+        }
+      } catch (err) {
+        console.error('Error creando turno:', err);
+        MT.toast && MT.toast('Error al generar turno. Intente nuevamente.', 'error');
+        isProcessing = false;
+      }
+    }
+
+    function showReceipt(number, serviceName, isPref, prefReason, eta, clientName) {
+      const dateStr = new Date().toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' });
+
+      // Actualizar modal en pantalla
+      const numEl = document.getElementById('receipt-num');
+      numEl.textContent = number;
+      numEl.className = 'receipt-num' + (isPref ? ' is-pref' : '');
+      document.getElementById('receipt-service').textContent = serviceName;
+      document.getElementById('receipt-time').textContent = dateStr;
+
+      const clientEl = document.getElementById('receipt-client-name');
+      if (clientEl) {
+        if (clientName) {
+          clientEl.textContent = `Usuario: ${clientName}`;
+          clientEl.style.display = 'block';
+        } else {
+          clientEl.style.display = 'none';
+        }
+      }
+
+      const etaEl = document.getElementById('receipt-eta');
+      if (etaEl) {
+        if (eta && eta.estimated_minutes) {
+          etaEl.textContent = `Tiempo est. de espera: ~${eta.estimated_minutes} min (Posición #${eta.position_in_queue || 1})`;
+          etaEl.style.display = 'block';
+        } else {
+          etaEl.style.display = 'none';
+        }
+      }
+
+      const prefBadge = document.getElementById('modal-pref-badge');
+      if (isPref) {
+        prefBadge.style.display = 'inline-flex';
+        document.getElementById('modal-pref-reason').textContent = `Preferencial (${prefReason || 'Discapacidad'})`;
+      } else {
+        prefBadge.style.display = 'none';
+      }
+
+      // Preparar versión térmica para imprimir
+      fillPrintTicket(number, serviceName, isPref, prefReason, dateStr, clientName);
+
+      const modal = document.getElementById('receipt-modal');
+      modal.style.display = 'flex';
+      MT.playChime();
+
+      // ── Impresión Automática ──────────────────────────────────────────────
+      setTimeout(() => window.print(), 400);
+
+      setTimeout(() => {
+        closeReceiptModal();
+      }, 7000);
+    }
+
+    function closeReceiptModal() {
+      const modal = document.getElementById('receipt-modal');
+      if (modal) modal.style.display = 'none';
+      isProcessing = false;
+      if (isPreferentialActive) togglePreferential();
+      goToStep1();
+    }
+
+    function fillPrintTicket(number, serviceName, isPref, prefReason, dateStr, clientName) {
+      document.getElementById('print-ticket-num').textContent = number;
+      document.getElementById('print-ticket-service').textContent = serviceName;
+      document.getElementById('print-ticket-date').textContent = dateStr || new Date().toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' });
+
+      const printClient = document.getElementById('print-ticket-client');
+      if (printClient) {
+        if (clientName) {
+          printClient.textContent = `USUARIO: ${clientName.toUpperCase()}`;
+          printClient.style.display = 'block';
+        } else {
+          printClient.style.display = 'none';
+        }
+      }
+
+      const printPref = document.getElementById('print-ticket-pref');
+      if (isPref) {
+        printPref.style.display = 'block';
+        printPref.textContent = `*** PREFERENCIAL (${prefReason || 'DISCAPACIDAD'}) ***`;
+      } else {
+        printPref.style.display = 'none';
+      }
+    }
+
+    function printReceiptTicket() {
+      window.print();
+    }
+
+    // ── Reprint Logic ──────────────────────────────────────────────────────
+    let reprintTicketData = null;
+
+    function openReprintModal() {
+      reprintTicketData = null;
+      document.getElementById('reprint-query').value = '';
+      document.getElementById('reprint-error').style.display = 'none';
+      document.getElementById('reprint-result').style.display = 'none';
+      document.getElementById('btn-do-reprint').style.display = 'none';
+
+      // Populate service selector for browse tab
+      const select = document.getElementById('reprint-service-select');
+      if (select && loadedServices.length > 0) {
+        select.innerHTML = '<option value="">-- Todos los servicios --</option>' +
+          loadedServices.map(s => `<option value="${s.id}">${s.name} (${s.prefix})</option>`).join('');
+      }
+
+      switchReprintTab('search');
+      document.getElementById('reprint-modal').style.display = 'flex';
+      setTimeout(() => document.getElementById('reprint-query').focus(), 200);
+    }
+
+    function switchReprintTab(tab) {
+      const searchTab = document.getElementById('tab-reprint-search');
+      const browseTab = document.getElementById('tab-reprint-browse');
+      const searchContent = document.getElementById('reprint-tab-search-content');
+      const browseContent = document.getElementById('reprint-tab-browse-content');
+
+      if (tab === 'search') {
+        searchTab.style.background = '#0284c7'; searchTab.style.color = '#fff';
+        browseTab.style.background = 'transparent'; browseTab.style.color = '#94a3b8';
+        searchContent.style.display = 'block';
+        browseContent.style.display = 'none';
+      } else {
+        browseTab.style.background = '#0284c7'; browseTab.style.color = '#fff';
+        searchTab.style.background = 'transparent'; searchTab.style.color = '#94a3b8';
+        searchContent.style.display = 'none';
+        browseContent.style.display = 'block';
+        loadTodayTicketsByService();
+      }
+    }
+
+    async function loadTodayTicketsByService() {
+      const serviceId = document.getElementById('reprint-service-select')?.value || '';
+      const listContainer = document.getElementById('reprint-service-list');
+      listContainer.innerHTML = '<div class="text-muted text-center text-xs py-3"><i class="fa-solid fa-spinner fa-spin"></i> Cargando turnos de hoy...</div>';
+
+      try {
+        const url = serviceId ? `/tickets/today-by-service?service_id=${serviceId}` : '/tickets/today-by-service';
+        const tickets = await MT.api(url).catch(() => []);
+
+        if (!tickets || tickets.length === 0) {
+          listContainer.innerHTML = '<div class="text-muted text-center text-xs py-3">No hay turnos emitidos hoy para este servicio.</div>';
+          return;
+        }
+
+        listContainer.innerHTML = tickets.map(t => `
+          <div class="reprint-item-row" onclick="selectTicketFromBrowse(${t.id})"
+            style="background:rgba(255,255,255,0.06); border:1px solid rgba(56,189,248,0.2); border-radius:10px; padding:8px 12px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <strong style="color:${t.is_preferential ? '#f59e0b' : '#38bdf8'}; font-size:16px;">${t.number}</strong>
+              ${t.client_name ? `<span style="font-size:12px; color:#cbd5e1; margin-left:8px;">${t.client_name}</span>` : '<span style="font-size:12px; color:#64748b; margin-left:8px;">(Sin nombre)</span>'}
+            </div>
+            <div style="text-align:right;">
+              <small style="color:#94a3b8; font-size:11px;">${new Date(t.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</small>
+              <button type="button" class="btn btn-xs" style="padding:2px 8px; font-size:11px; background:#0284c7; color:#fff; border:none; margin-left:8px;">Seleccionar</button>
+            </div>
+          </div>
+        `).join('');
+
+        window._browseTickets = tickets;
+      } catch (e) {
+        listContainer.innerHTML = '<div class="text-muted text-center text-xs py-3">Error cargando turnos.</div>';
+      }
+    }
+
+    function selectTicketFromBrowse(ticketId) {
+      const ticket = (window._browseTickets || []).find(t => t.id === ticketId);
+      if (ticket) {
+        showReprintTicketData(ticket);
+      }
+    }
+
+    function closeReprintModal() {
+      document.getElementById('reprint-modal').style.display = 'none';
+    }
+
+    function clearReprintResult() {
+      document.getElementById('reprint-error').style.display = 'none';
+      document.getElementById('reprint-result').style.display = 'none';
+      document.getElementById('btn-do-reprint').style.display = 'none';
+      reprintTicketData = null;
+    }
+
+    function showReprintTicketData(ticket) {
+      reprintTicketData = ticket;
+      const isPref = ticket.is_preferential;
+      const resultEl = document.getElementById('reprint-result');
+      resultEl.className = 'reprint-result' + (isPref ? ' is-pref' : '');
+      document.getElementById('reprint-r-num').textContent = ticket.number;
+
+      const rClientEl = document.getElementById('reprint-r-client');
+      if (rClientEl) {
+        if (ticket.client_name) {
+          rClientEl.textContent = `Usuario: ${ticket.client_name}`;
+          rClientEl.style.display = 'block';
+        } else {
+          rClientEl.style.display = 'none';
+        }
+      }
+
+      document.getElementById('reprint-r-service').textContent = ticket.service?.name || 'Servicio';
+      const created = new Date(ticket.created_at).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' });
+      document.getElementById('reprint-r-date').textContent = `Emitido: ${created} — Estado: ${ticket.status}`;
+      resultEl.style.display = 'block';
+      document.getElementById('btn-do-reprint').style.display = 'flex';
+      document.getElementById('reprint-error').style.display = 'none';
+    }
+
+    async function searchForReprint() {
+      const query = document.getElementById('reprint-query').value.trim();
+      if (!query) return;
+      clearReprintResult();
+      const errEl = document.getElementById('reprint-error');
+      try {
+        const ticket = await MT.api(`/tickets/lookup?query=${encodeURIComponent(query)}`);
+        showReprintTicketData(ticket);
+      } catch (e) {
+        errEl.textContent = e.message || `No se encontró el turno "${query}" en el día de hoy.`;
+        errEl.style.display = 'block';
+      }
+    }
+
+    async function loadLastIssued() {
+      clearReprintResult();
+      const errEl = document.getElementById('reprint-error');
+      const btn = document.getElementById('btn-load-last');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Buscando...';
+      try {
+        const ticket = await MT.api('/tickets/last-issued');
+        document.getElementById('reprint-query').value = ticket.number;
+        showReprintTicketData(ticket);
+      } catch (e) {
+        errEl.textContent = 'No se encontraron turnos emitidos hoy.';
+        errEl.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-clock-rotate-left"></i> Cargar mi último turno emitido hoy';
+      }
+    }
+
+    function doReprint() {
+      if (!reprintTicketData) return;
+      const t = reprintTicketData;
+      fillPrintTicket(
+        t.number,
+        t.service?.name || 'Servicio',
+        t.is_preferential,
+        t.preferential_reason,
+        new Date(t.created_at).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' }),
+        t.client_name
+      );
+      closeReprintModal();
+      setTimeout(() => window.print(), 200);
+    }
+
+    // ── Appointment Check-In Logic ──────────────────────────────────────────
+    let currentFoundAppt = null;
+
+    function openAppointmentModal() {
+      currentFoundAppt = null;
+      document.getElementById('appt-code-input').value = '';
+      document.getElementById('appt-error').style.display = 'none';
+      document.getElementById('appt-result').style.display = 'none';
+      document.getElementById('btn-convert-appt').style.display = 'none';
+      document.getElementById('appointment-modal').style.display = 'flex';
+      setTimeout(() => document.getElementById('appt-code-input').focus(), 200);
+    }
+
+    function closeAppointmentModal() {
+      document.getElementById('appointment-modal').style.display = 'none';
+    }
+
+    async function searchAppointmentCode() {
+      const code = document.getElementById('appt-code-input').value.trim().toUpperCase();
+      if (!code) return;
+
+      const errEl = document.getElementById('appt-error');
+      errEl.style.display = 'none';
+      document.getElementById('appt-result').style.display = 'none';
+      document.getElementById('btn-convert-appt').style.display = 'none';
+
+      try {
+        const appt = await MT.api(`/appointments/lookup/${code}`);
+        currentFoundAppt = appt;
+
+        document.getElementById('appt-r-name').textContent = appt.client_name;
+        document.getElementById('appt-r-service').textContent = appt.service?.name || 'Servicio';
+        document.getElementById('appt-r-date').textContent = `Programada para: ${appt.scheduled_date} a las ${appt.scheduled_time}`;
+
+        document.getElementById('appt-result').style.display = 'block';
+        document.getElementById('btn-convert-appt').style.display = 'flex';
+      } catch (err) {
+        errEl.textContent = err.message || `No se encontró cita con el código "${code}".`;
+        errEl.style.display = 'block';
+      }
+    }
+
+    async function convertAppointmentToTicket() {
+      if (!currentFoundAppt) return;
+      try {
+        const res = await MT.api(`/appointments/${currentFoundAppt.id}/convert`, { method: 'POST' });
+        if (res && res.ticket) {
+          closeAppointmentModal();
+          showReceipt(res.ticket.number, res.ticket.service?.name, false, 'Cita Programada');
+        }
+      } catch (err) {
+        MT.toast && MT.toast(err.message || 'Error al convertir cita en turno', 'error');
+      }
+    }
+  </script>
+</body>
+</html>

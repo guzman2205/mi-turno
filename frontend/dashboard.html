@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi turno — Tablero de Control</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="styles.css?v=2.0">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <div id="sidebar-container"></div>
+
+    <main class="app-main">
+      <div id="topbar-container"></div>
+
+      <div class="content-body">
+        <!-- KPI Metrics Grid -->
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-icon blue"><i class="fa-solid fa-users-viewfinder"></i></div>
+            <div class="kpi-data">
+              <span class="kpi-value" id="stat-waiting">0</span>
+              <span class="kpi-label">En Espera</span>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon green"><i class="fa-solid fa-headset"></i></div>
+            <div class="kpi-data">
+              <span class="kpi-value" id="stat-attending">0</span>
+              <span class="kpi-label">En Atención</span>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon purple"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="kpi-data">
+              <span class="kpi-value" id="stat-attended">0</span>
+              <span class="kpi-label">Atendidos Hoy</span>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon red"><i class="fa-solid fa-user-xmark"></i></div>
+            <div class="kpi-data">
+              <span class="kpi-value" id="stat-absent">0</span>
+              <span class="kpi-label">Ausentes</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ventanillas / Mostradores en Vivo -->
+        <div class="section-header">
+          <h2><i class="fa-solid fa-desktop"></i> Estado de Mostradores</h2>
+          <span class="badge-live"><i class="fa-solid fa-circle"></i> Sincronizado</span>
+        </div>
+        <div class="counters-grid" id="counters-container">
+          <div class="loading-state"><i class="fa-solid fa-spinner fa-spin"></i> Cargando mostradores...</div>
+        </div>
+
+        <!-- Interactive Analytics Charts Grid -->
+        <div class="grid-2 gap-4 mt-4 mb-4" style="display:grid; grid-template-columns: 1.4fr 1fr; gap:20px;">
+          <div class="card p-4">
+            <div class="card-header mb-3" style="padding:0; background:transparent; border:none;">
+              <h3 style="font-size:16px;"><i class="fa-solid fa-chart-line text-primary"></i> Volumen de Turnos por Hora</h3>
+            </div>
+            <div style="position:relative; height:220px;">
+              <canvas id="hourly-chart"></canvas>
+            </div>
+          </div>
+          <div class="card p-4">
+            <div class="card-header mb-3" style="padding:0; background:transparent; border:none;">
+              <h3 style="font-size:16px;"><i class="fa-solid fa-chart-pie text-primary"></i> Distribución de Estados</h3>
+            </div>
+            <div style="position:relative; height:220px;">
+              <canvas id="status-chart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cola de Turnos en Vivo -->
+        <div class="section-header mt-4">
+          <h2><i class="fa-solid fa-list-ol"></i> Cola de Turnos en Tiempo Real</h2>
+          <div class="flex-align gap-2">
+            <button class="btn-refresh" style="background:#0284c7; color:#fff;" onclick="downloadDailyCSV()"><i class="fa-solid fa-file-csv"></i> Exportar CSV</button>
+            <button class="btn-refresh" onclick="loadDashboardData()"><i class="fa-solid fa-rotate-right"></i> Actualizar</button>
+          </div>
+        </div>
+        <div class="card table-card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Turno</th>
+                <th>Servicio / Área</th>
+                <th>Mostrador</th>
+                <th>Agente</th>
+                <th>Estado</th>
+                <th>Hora</th>
+              </tr>
+            </thead>
+            <tbody id="queue-table-body">
+              <tr><td colspan="6" class="text-center py-4">Cargando turnos...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!MT.requireAuth()) return;
+      MT.renderSidebar('dashboard');
+      MT.renderTopbar('Tablero de Control', 'Monitor central del flujo de atención');
+      loadDashboardData();
+
+      // Listen to real-time events
+      if (MT.socket) {
+        MT.socket.on('ticket:new', () => { loadDashboardData(); MT.toast('Nuevo turno emitido en quiosco', 'info'); });
+        MT.socket.on('ticket:called', (data) => { loadDashboardData(); MT.toast(`Turno ${data?.ticket?.number} llamado`, 'success'); });
+        MT.socket.on('ticket:attended', () => loadDashboardData());
+        MT.socket.on('ticket:absent', () => loadDashboardData());
+      }
+    });
+
+    async function downloadDailyCSV() {
+      try {
+        const token = MT.getToken();
+        const today = new Date().toISOString().slice(0, 10);
+        const res = await fetch(`${MT.apiBase}/reports/daily?date=${today}&format=csv`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error('Error al generar reporte CSV');
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `reporte-diario-${today}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        MT.toast('Reporte CSV descargado exitosamente', 'success');
+      } catch (e) {
+        MT.toast(e.message || 'Error al exportar CSV', 'error');
+      }
+    }
+
+    let hourlyChart = null;
+    let statusChart = null;
+
+    function renderCharts(reportData) {
+      if (typeof Chart === 'undefined') return;
+
+      // 1. Hourly Chart
+      const hourlyCanvas = document.getElementById('hourly-chart');
+      if (hourlyCanvas) {
+        const hours = Array.from({length: 11}, (_, i) => `${i + 7}:00`);
+        const counts = hours.map((_, i) => {
+          const hourNum = i + 7;
+          const found = reportData?.hourly?.find(h => parseInt(h.hour, 10) === hourNum);
+          return found ? parseInt(found.count, 10) : 0;
+        });
+
+        if (hourlyChart) hourlyChart.destroy();
+        hourlyChart = new Chart(hourlyCanvas, {
+          type: 'line',
+          data: {
+            labels: hours,
+            datasets: [{
+              label: 'Turnos Emitidos',
+              data: counts,
+              borderColor: '#0284c7',
+              backgroundColor: 'rgba(2, 132, 199, 0.15)',
+              fill: true,
+              tension: 0.4
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: { beginAtZero: true, ticks: { precision: 0 } }
+            }
+          }
+        });
+      }
+
+      // 2. Status Chart
+      const statusCanvas = document.getElementById('status-chart');
+      if (statusCanvas) {
+        const stats = reportData?.stats || {};
+        if (statusChart) statusChart.destroy();
+        statusChart = new Chart(statusCanvas, {
+          type: 'doughnut',
+          data: {
+            labels: ['En Espera', 'En Atención', 'Atendidos', 'Ausentes'],
+            datasets: [{
+              data: [stats.waiting || 0, stats.attending || 0, stats.attended || 0, stats.absent || 0],
+              backgroundColor: ['#38bdf8', '#34d399', '#a855f7', '#f87171']
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom' } }
+          }
+        });
+      }
+    }
+
+    async function loadDashboardData() {
+      try {
+        // Fetch stats
+        const stats = await MT.api('/tickets/stats').catch(() => null);
+        if (stats) {
+          document.getElementById('stat-waiting').textContent = stats.waiting || 0;
+          document.getElementById('stat-attending').textContent = stats.attending || 0;
+          document.getElementById('stat-attended').textContent = stats.attended || 0;
+          document.getElementById('stat-absent').textContent = stats.absent || 0;
+        }
+
+        // Fetch daily report for charts
+        const today = new Date().toISOString().slice(0, 10);
+        const report = await MT.api(`/reports/daily?date=${today}`).catch(() => null);
+        if (report) renderCharts(report);
+
+        // Fetch counters
+        const counters = await MT.api('/counters').catch(() => []);
+        renderCounters(counters || []);
+
+        // Fetch queue
+        const queue = await MT.api('/tickets/queue').catch(() => []);
+        renderQueue(queue || []);
+      } catch (e) {
+        console.error('Error cargando datos del dashboard:', e);
+      }
+    }
+
+    function renderCounters(counters) {
+      const el = document.getElementById('counters-container');
+      if (!counters || counters.length === 0) {
+        el.innerHTML = '<p class="text-muted p-4">No hay mostradores configurados.</p>';
+        return;
+      }
+
+      el.innerHTML = counters.map(c => `
+        <div class="counter-box status-${c.status}">
+          <div class="counter-header">
+            <strong>${c.name}</strong>
+            <span class="status-pill status-${c.status}">${c.status === 'busy' ? 'Atendiendo' : c.status === 'active' ? 'Disponible' : 'Inactivo'}</span>
+          </div>
+          <div class="counter-agent">
+            <i class="fa-solid fa-user-doctor"></i> ${c.agent ? c.agent.name : 'Sin operador asignado'}
+          </div>
+          <div class="counter-ticket">
+            <span class="ticket-label">Turno Actual:</span>
+            <span class="ticket-code">${c.currentTicket ? c.currentTicket.number : '--'}</span>
+          </div>
+          ${c.agent_id || c.agent ? `
+            <div style="margin-top:10px; padding-top:8px; border-top:1px dashed #e2e8f0; text-align:right;">
+              <button type="button" class="btn btn-xs" style="background:#fee2e2; color:#dc2626; border:1px solid #fca5a5; font-weight:700; border-radius:8px; padding:4px 10px;" onclick="releaseDashboardCounter(${c.id}, '${c.name}')" title="Liberar puesto y finalizar jornada del operador">
+                <i class="fa-solid fa-right-from-bracket"></i> Liberar Puesto
+              </button>
+            </div>
+          ` : ''}
+        </div>
+      `).join('');
+    }
+
+    async function releaseDashboardCounter(id, counterName) {
+      if (!confirm(`¿Desea liberar el puesto "${counterName}" y finalizar la jornada del operador asignado?`)) return;
+      try {
+        await MT.api(`/counters/${id}/release`, { method: 'POST' });
+        MT.toast(`Puesto "${counterName}" liberado exitosamente`, 'success');
+        loadDashboardData();
+      } catch (err) {
+        MT.toast(err.message || 'Error al liberar puesto', 'error');
+      }
+    }
+
+    function renderQueue(tickets) {
+      const tbody = document.getElementById('queue-table-body');
+      if (!tickets || tickets.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No hay turnos pendientes en la cola.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = tickets.map(t => `
+        <tr>
+          <td><strong class="ticket-tag" style="background:${t.service?.color || '#0284c7'}20; color:${t.service?.color || '#0284c7'}; border: 1px solid ${t.service?.color || '#0284c7'}50;">${t.number}</strong></td>
+          <td><i class="fa-solid fa-tag" style="color:${t.service?.color || '#0284c7'}"></i> ${t.service?.name || 'General'}</td>
+          <td>${t.counter ? t.counter.name : '<span class="text-muted">—</span>'}</td>
+          <td>${t.agent ? t.agent.name : '<span class="text-muted">—</span>'}</td>
+          <td><span class="status-pill status-${t.status}">${t.status === 'waiting' ? 'En Espera' : t.status === 'calling' ? 'Llamando' : 'En Atención'}</span></td>
+          <td>${new Date(t.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+        </tr>
+      `).join('');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi turno — Pantalla de Atención y Multimedia</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: #060d1a;
+      color: #ffffff;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    /* Top Bar */
+    .display-header {
+      background: #0c182b;
+      padding: 14px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #1e3a5f;
+    }
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .header-logo { font-size: 30px; color: #38bdf8; }
+    .header-title h1 { font-size: 24px; font-weight: 800; }
+    .header-title h1 span { color: #38bdf8; }
+    .header-title p { font-family: 'Inter', sans-serif; font-size: 12px; color: #94a3b8; }
+    .header-meta { display: flex; align-items: center; gap: 20px; }
+    .live-indicator {
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #34d399; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700;
+      padding: 5px 12px; border-radius: 20px;
+    }
+    .pulse-dot { width: 8px; height: 8px; background: #34d399; border-radius: 50%; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(0.8); } }
+    .display-clock { font-size: 28px; font-weight: 800; color: #f8fafc; }
+
+    /* Main Area: 3 Columns Grid (Llamando / Multimedia / Próximos & Atendidos) */
+    .display-main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1.2fr 1.2fr 0.9fr;
+      gap: 20px;
+      padding: 20px 28px;
+      min-height: 0;
+    }
+
+    /* Column 1: Main Hero Call Card */
+    .hero-col {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .hero-call-card {
+      background: linear-gradient(145deg, #0d2342 0%, #08162b 100%);
+      border: 2px solid #2563eb;
+      border-radius: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 18px 20px;
+      position: relative;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 0 35px rgba(37,99,235,0.15);
+      transition: all 0.3s;
+    }
+    .hero-call-card.calling-anim {
+      animation: ringGlow 1s ease-in-out infinite alternate;
+    }
+    @keyframes ringGlow {
+      from { border-color: #2563eb; box-shadow: 0 0 20px rgba(37,99,235,0.4); }
+      to { border-color: #38bdf8; box-shadow: 0 0 50px rgba(56,189,248,0.85); }
+    }
+    .hero-tag {
+      background: #2563eb;
+      color: white;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      padding: 5px 16px;
+      border-radius: 30px;
+      margin-bottom: 10px;
+    }
+    .hero-ticket-num {
+      font-size: 72px;
+      font-weight: 900;
+      color: #ffffff;
+      line-height: 1;
+      text-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      margin-bottom: 6px;
+      letter-spacing: 2px;
+    }
+    .hero-ticket-num.is-pref { color: #fbbf24; }
+    .hero-client-name {
+      font-size: 22px;
+      font-weight: 800;
+      color: #ffffff;
+      margin-bottom: 8px;
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      padding: 5px 16px;
+      border-radius: 12px;
+    }
+    .hero-counter-label {
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 2px;
+    }
+    .hero-counter-name {
+      font-size: 30px;
+      font-weight: 800;
+      color: #38bdf8;
+    }
+
+    /* Column 2: Universal Multimedia Player */
+    .media-card {
+      background: #0b1a30;
+      border: 1px solid #1a3254;
+      border-radius: 24px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+    .media-header {
+      background: rgba(12, 24, 43, 0.85);
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #1a3254;
+    }
+    .media-header-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #cbd5e1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-media-config {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #94a3b8;
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-media-config:hover { color: #fff; background: rgba(255, 255, 255, 0.15); }
+    .media-player-container {
+      flex: 1;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+    .media-player-container iframe,
+    .media-player-container video {
+      width: 100%;
+      height: 100%;
+      border: none;
+      object-fit: contain;
+    }
+
+    /* Column 3: Próximos a ser llamados & Últimos Atendidos */
+    .queue-flow-col {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .flow-card {
+      background: #0b1a30;
+      border: 1px solid #1a3254;
+      border-radius: 20px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+    }
+    .flow-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #cbd5e1;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .flow-list {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      overflow-y: auto;
+    }
+    .flow-item {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 12px;
+      padding: 10px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .flow-item.is-pref {
+      border-color: rgba(245, 158, 11, 0.4);
+      background: rgba(245, 158, 11, 0.08);
+    }
+    .flow-ticket {
+      font-size: 22px;
+      font-weight: 800;
+      color: #ffffff;
+    }
+    .flow-ticket.is-pref { color: #fbbf24; }
+    .flow-meta {
+      text-align: right;
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+    .flow-meta strong {
+      display: block;
+      color: #38bdf8;
+      font-size: 13px;
+    }
+
+    /* Bottom Ticker — Fondo blanco, letras negras, velocidad optimizada */
+    .display-ticker {
+      background: #ffffff;
+      color: #000000;
+      padding: 12px 28px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      font-size: 18px;
+      font-weight: 700;
+      border-top: 4px solid #0284c7;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
+    }
+    .ticker-icon {
+      background: #0284c7;
+      color: #ffffff;
+      padding: 6px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      flex-shrink: 0;
+    }
+    .ticker-content { flex: 1; overflow: hidden; white-space: nowrap; }
+    .ticker-text {
+      display: inline-block;
+      padding-left: 100%;
+      color: #000000;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      animation: marquee 55s linear infinite;
+    }
+    @keyframes marquee { 0% { transform: translate(0, 0); } 100% { transform: translate(-100%, 0); } }
+
+    /* Modal de Configuración Multimedia */
+    .media-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(6, 13, 26, 0.85);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    .media-modal-card {
+      background: #0d1f3c;
+      border: 1px solid #1e3a5f;
+      border-radius: 20px;
+      padding: 28px;
+      max-width: 520px;
+      width: 90%;
+    }
+    .media-modal-card h3 { font-size: 20px; margin-bottom: 12px; }
+    .media-input {
+      width: 100%;
+      padding: 12px 14px;
+      background: #060d1a;
+      border: 1px solid #1e3a5f;
+      color: #fff;
+      border-radius: 10px;
+      margin-bottom: 16px;
+      font-family: 'Inter', sans-serif;
+    }
+    .media-presets { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+    .preset-btn {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #94a3b8;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      cursor: pointer;
+      text-align: left;
+    }
+    .preset-btn:hover { background: rgba(56, 189, 248, 0.15); color: #fff; }
+
+    /* Button Base Styles */
+    .btn {
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-primary {
+      background: #0284c7;
+      color: #ffffff;
+    }
+    .btn-primary:hover {
+      background: #0369a1;
+    }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: #cbd5e1;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.2);
+      color: #ffffff;
+    }
+    .text-xs { font-size: 12px !important; }
+
+    /* Audio Status Widget & Activation Banner */
+    .audio-widget-container {
+      display: flex;
+      align-items: center;
+    }
+    .btn-audio-status {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      color: #94a3b8;
+      border-radius: 30px;
+      padding: 6px 14px;
+      cursor: pointer;
+      font-size: 13px;
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: all 0.2s;
+    }
+    .btn-audio-status.active {
+      border-color: #10b981;
+      color: #34d399;
+      background: rgba(16, 185, 129, 0.15);
+    }
+    .btn-test-sound {
+      background: #0ea5e9;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      transition: all 0.2s;
+    }
+    .btn-test-sound:hover {
+      background: #38bdf8;
+    }
+    .audio-activation-banner {
+      position: fixed;
+      bottom: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #0ea5e9;
+      color: #ffffff;
+      padding: 12px 24px;
+      border-radius: 30px;
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 10px 30px rgba(14, 165, 233, 0.4);
+      z-index: 1000;
+      cursor: pointer;
+      animation: bouncePrompt 2s infinite;
+    }
+    @keyframes bouncePrompt {
+      0%, 100% { transform: translate(-50%, 0); }
+      50% { transform: translate(-50%, -6px); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Floating Activation Banner if needed -->
+  <div id="audio-activation-banner" class="audio-activation-banner" onclick="enableAudio()" style="display:none;">
+    <i class="fa-solid fa-volume-high"></i>
+    <span><strong>Altavoz de Sala:</strong> Haz clic en cualquier lugar para activar la voz de llamados (TTS)</span>
+    <span class="btn-test-sound">Activar</span>
+  </div>
+
+  <!-- Top Header -->
+  <header class="display-header">
+    <div class="header-brand">
+      <div class="header-logo"><i class="fa-solid fa-layer-group"></i></div>
+      <div class="header-title">
+        <h1>Mi <span>turno</span></h1>
+        <p id="display-company-name">Centro de Atención y Servicios</p>
+      </div>
+    </div>
+    <div class="header-meta">
+      <div class="audio-widget-container">
+        <button id="audio-toggle-btn" class="btn-audio-status" onclick="toggleAudio(event)" title="Estado del altavoz TTS">
+          <i class="fa-solid fa-volume-high" id="audio-icon"></i>
+          <span id="audio-status-label">Altavoz TTS</span>
+          <span class="btn-test-sound" onclick="testAudioAnnouncement(event)">Probar</span>
+        </button>
+      </div>
+      <div class="live-indicator">
+        <div class="pulse-dot"></div>
+        SISTEMA EN VIVO
+      </div>
+      <div class="display-clock" id="display-clock">--:--:--</div>
+    </div>
+  </header>
+
+  <!-- Main 3-Column Display -->
+  <div class="display-main">
+    <!-- Col 1: Hero Llamando Ahora & Multi-Mostrador -->
+    <div class="hero-col">
+      <div class="hero-call-card" id="hero-card">
+        <div class="hero-tag"><i class="fa-solid fa-bell"></i> LLAMANDO AHORA</div>
+        <div class="hero-ticket-num" id="hero-ticket">--</div>
+        <div class="hero-client-name" id="hero-client-name" style="display:none;"></div>
+        <div class="hero-service-name" id="hero-service" style="font-size: 20px; font-weight: 800; color: #cbd5e1; margin-bottom: 8px;">Área / Servicio</div>
+        <div class="hero-counter-label">Por favor dirigirse a</div>
+        <div class="hero-counter-name" id="hero-counter">Esperando llamada...</div>
+      </div>
+      <div id="multi-attending-grid" class="multi-attending-grid" style="display:none; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px;"></div>
+    </div>
+
+    <!-- Col 2: Reproductor Multimedia Universal -->
+    <div class="media-card">
+      <div class="media-header">
+        <div class="media-header-title">
+          <i class="fa-solid fa-play"></i> Contenido Multimedia e Información
+        </div>
+        <button class="btn-media-config" onclick="openMediaModal()">
+          <i class="fa-solid fa-gear"></i> Cambiar URL
+        </button>
+      </div>
+      <div class="media-player-container" id="media-player-container">
+        <!-- Contenedor dinámico (Video MP4, YouTube, Spotify, Intranet) -->
+      </div>
+    </div>
+
+    <!-- Col 3: Próximos en Ser Llamados & Historial Atendidos -->
+    <div class="queue-flow-col">
+      <!-- Próximos en ser llamados -->
+      <div class="flow-card">
+        <div class="flow-title">
+          <span><i class="fa-solid fa-hourglass-half text-primary"></i> Próximos en Espera</span>
+          <small class="badge-count" id="upcoming-count">0</small>
+        </div>
+        <div class="flow-list" id="upcoming-container">
+          <div class="flow-item">
+            <span class="flow-ticket text-muted">--</span>
+            <span class="flow-meta">Sin turnos en cola</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recién Atendidos -->
+      <div class="flow-card">
+        <div class="flow-title">
+          <span><i class="fa-solid fa-circle-check" style="color:#10b981;"></i> Turnos Atendidos</span>
+          <small class="badge-count" id="attended-count">0</small>
+        </div>
+        <div class="flow-list" id="attended-container">
+          <div class="flow-item">
+            <span class="flow-ticket text-muted">--</span>
+            <span class="flow-meta">Sin historial previo</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Ticker -->
+  <div class="display-ticker">
+    <div class="ticker-icon"><i class="fa-solid fa-bullhorn"></i> AVISOS</div>
+    <div class="ticker-content">
+      <div class="ticker-text" id="ticker-text">
+        Bienvenido a Mi turno. Por favor tome su turno en el quiosco y espere ser llamado en pantalla. Personas con condición prioritaria cuentan con atención preferencial.
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Configuración URL Multimedia -->
+  <div class="media-modal" id="media-modal">
+    <div class="media-modal-card">
+      <h3><i class="fa-solid fa-link"></i> Configurar Origen Multimedia</h3>
+      <p style="font-family:'Inter'; font-size:13px; color:#94a3b8; margin-bottom:14px;">
+        Ingresa cualquier URL de YouTube, Spotify, video MP4 directo o enlace de intranet (ej. SNS).
+      </p>
+
+      <input type="text" id="media-url-input" class="media-input" placeholder="https://... (YouTube, MP4, intranet SNS, Spotify)">
+
+      <div class="media-presets">
+        <div class="preset-btn" onclick="setPresetMedia('announcements')" style="background:rgba(56,189,248,0.1); border-color:rgba(56,189,248,0.3); color:#fff;">
+          <i class="fa-solid fa-scroll" style="color:#38bdf8;"></i> <strong>📢 Carrusel de Anuncios, Imágenes y Videos (Recomendado)</strong><br>
+          <small style="color:#cbd5e1; display:block; margin-top:2px;">Transmite de forma cíclica los avisos, fotos y videos creados en el módulo de Anuncios.</small>
+        </div>
+        <div class="preset-btn" onclick="setPresetMedia('https://intranet.sns.gob.do/intranetphp/videos/')">
+          <i class="fa-solid fa-video" style="color:#38bdf8;"></i> Intranet SNS: Galería de Videos de Salud
+        </div>
+        <div class="preset-btn" onclick="setPresetMedia('https://www.youtube.com/watch?v=jfKfPfyJRdk')">
+          <i class="fa-brands fa-youtube" style="color:#ef4444;"></i> YouTube: Playlist / Video Informativo
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; gap:10px;">
+        <button type="button" class="btn btn-secondary" onclick="closeMediaModal()">Cerrar</button>
+        <button type="button" class="btn btn-primary" onclick="saveMediaUrl()"><i class="fa-solid fa-play"></i> Guardar y Reproducir</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="app.js"></script>
+  <script>
+    let audioAllowed = false;
+    let currentMediaUrl = localStorage.getItem('miturno_media_url') || 'https://intranet.sns.gob.do/intranetphp/videos/';
+
+    function enableAudio() {
+      audioAllowed = true;
+      localStorage.setItem('miturno_audio_allowed', '1');
+
+      const banner = document.getElementById('audio-activation-banner');
+      if (banner) banner.style.display = 'none';
+
+      const btn = document.getElementById('audio-toggle-btn');
+      if (btn) btn.classList.add('active');
+
+      const label = document.getElementById('audio-status-label');
+      if (label) label.textContent = 'Altavoz TTS: Activo';
+
+      // Test chime to unlock AudioContext
+      MT.playChime().catch(() => {});
+    }
+
+    function toggleAudio(ev) {
+      if (ev) ev.stopPropagation();
+      if (!audioAllowed) {
+        enableAudio();
+        testAudioAnnouncement();
+      } else {
+        testAudioAnnouncement();
+      }
+    }
+
+    async function testAudioAnnouncement(ev) {
+      if (ev) ev.stopPropagation();
+      if (!audioAllowed) enableAudio();
+
+      duckMediaVolume(true);
+      const chimeEnabled = window.MT_SETTINGS?.tts_chime_enabled !== 'false' && window.MT_SETTINGS?.tts_chime_enabled !== 'No';
+      if (chimeEnabled) await MT.playChime();
+
+      await MT.speakTicketTemplate(
+        { number: 'CG-001', is_preferential: false, service: { name: 'Consulta General' } },
+        'Ventanilla 1',
+        {
+          templateNormal: window.MT_SETTINGS?.tts_template_normal,
+          templatePref: window.MT_SETTINGS?.tts_template_preferential,
+          token: window.MT_SETTINGS?.voice_token_translation || 'Turno',
+          rate: window.MT_SETTINGS?.tts_rate,
+          repeats: 1
+        }
+      );
+      duckMediaVolume(false);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // Clock
+      setInterval(() => {
+        const d = new Date();
+        document.getElementById('display-clock').textContent = d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      }, 1000);
+
+      // Check audio status or prompt
+      if (localStorage.getItem('miturno_audio_allowed') === '1') {
+        enableAudio();
+      } else {
+        const banner = document.getElementById('audio-activation-banner');
+        if (banner) banner.style.display = 'flex';
+      }
+
+      // First click anywhere unlocks audio
+      document.body.addEventListener('click', () => {
+        if (!audioAllowed) enableAudio();
+      }, { once: true });
+
+      // Load initial data
+      loadSystemSettings();
+      loadScreenFlow();
+      loadAnnouncements();
+
+      // Sockets
+      if (MT.socket) {
+        MT.socket.emit('join_display');
+        MT.socket.on('ticket:called', (data) => {
+          onNewCall(data?.ticket, data?.counter?.name, data?.callByMode);
+          loadScreenFlow();
+        });
+        MT.socket.on('ticket:new', () => loadScreenFlow());
+        MT.socket.on('ticket:attended', () => loadScreenFlow());
+        MT.socket.on('ticket:transferred', () => loadScreenFlow());
+        MT.socket.on('announcement:update', () => loadAnnouncements());
+        MT.socket.on('settings:update', (updated) => {
+          if (updated) {
+            window.MT_SETTINGS = Object.assign({}, window.MT_SETTINGS, updated);
+          }
+          loadSystemSettings();
+        });
+      }
+    });
+
+    const displayTypeFilter = new URLSearchParams(window.location.search).get('type'); // null, 'service', 'administrative'
+
+    async function loadSystemSettings() {
+      try {
+        const s = await MT.api('/settings').catch(() => null);
+        if (!s) return;
+        window.MT_SETTINGS = s;
+
+        if (displayTypeFilter === 'administrative') {
+          document.title = 'Mi turno — Pantalla TV (Área Administrativa)';
+          const subEl = document.getElementById('display-company-name');
+          if (subEl) subEl.textContent = 'Gestión y Atención de Citas Administrativas';
+        } else if (s.company_name) {
+          const el = document.getElementById('display-company-name');
+          if (el) el.textContent = s.company_name;
+        }
+
+        if (s.notification_text) {
+          const el = document.getElementById('ticker-text');
+          if (el) {
+            el.textContent = s.notification_text;
+            el.style.color = s.notification_color || '#000000';
+            const duration = Math.max(45, Math.round(s.notification_text.length * 0.35));
+            el.style.animationDuration = `${duration}s`;
+          }
+        }
+        if (s.youtube_playlist_id && !localStorage.getItem('miturno_media_url')) {
+          currentMediaUrl = s.youtube_playlist_id;
+          renderMediaPlayer(currentMediaUrl);
+        } else if (!localStorage.getItem('miturno_media_url')) {
+          renderMediaPlayer(currentMediaUrl);
+        }
+      } catch (e) {
+        console.warn('Error loading settings on display:', e);
+      }
+    }
+
+    async function loadScreenFlow() {
+      try {
+        let data = await MT.api('/tickets/screen-flow').catch(() => null);
+        if (!data) return;
+
+        // Filter data if screen is dedicated to a specific type (e.g. ?type=administrative)
+        if (displayTypeFilter) {
+          if (data.attending) {
+            data.attending = data.attending.filter(t => !t.service || t.service.type === displayTypeFilter);
+          }
+          if (data.upcoming) {
+            data.upcoming = data.upcoming.filter(t => !t.service || t.service.type === displayTypeFilter);
+          }
+          if (data.attended) {
+            data.attended = data.attended.filter(t => !t.service || t.service.type === displayTypeFilter);
+          }
+        }
+
+        // 1. Current attending
+        if (data.attending && data.attending.length > 0) {
+          const current = data.attending[0];
+          document.getElementById('hero-ticket').textContent = current.number;
+          const serviceEl = document.getElementById('hero-service');
+          if (serviceEl) serviceEl.textContent = current.service?.name || 'Área de Servicio';
+          document.getElementById('hero-counter').textContent = current.counter?.name || 'Ventanilla';
+          document.getElementById('hero-ticket').className = 'hero-ticket-num' + (current.is_preferential ? ' is-pref' : '');
+
+          const heroClient = document.getElementById('hero-client-name');
+          if (heroClient) {
+            if (current.client_name) {
+              heroClient.textContent = `Usuario: ${current.client_name}`;
+              heroClient.style.display = 'block';
+            } else {
+              heroClient.style.display = 'none';
+            }
+          }
+
+          // Grid multi-mostrador activo
+          const multiGrid = document.getElementById('multi-attending-grid');
+          if (multiGrid) {
+            if (data.attending.length > 1) {
+              multiGrid.style.display = 'grid';
+              multiGrid.innerHTML = data.attending.map((t, idx) => `
+                <div class="multi-att-card" style="background: rgba(13, 31, 60, 0.95); border: 1.5px solid ${t.id === current.id ? '#38bdf8' : 'rgba(56, 189, 248, 0.35)'}; border-radius: 14px; padding: 12px; text-align: center; box-shadow: 0 4px 14px rgba(0,0,0,0.3);">
+                  <div style="font-size: 22px; font-weight: 900; color: ${t.is_preferential ? '#fbbf24' : '#38bdf8'}; line-height: 1.1;">${t.number}</div>
+                  ${t.client_name ? `<div style="font-size: 13px; font-weight: 700; color: #ffffff; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><i class="fa-solid fa-user text-muted" style="font-size:10px;"></i> ${t.client_name}</div>` : ''}
+                  <div style="font-size: 13px; font-weight: 800; color: #38bdf8; margin-top: 3px; font-family: 'Inter', sans-serif;">${t.counter?.name || 'Ventanilla'}</div>
+                  <div style="font-size: 11px; color: #94a3b8; font-family: 'Inter', sans-serif;">${t.service?.name || ''}</div>
+                </div>
+              `).join('');
+            } else {
+              multiGrid.style.display = 'none';
+            }
+          }
+        }
+
+        // 2. Upcoming tickets (Próximos a ser llamados)
+        renderUpcoming(data.upcoming || []);
+
+        // 3. Recently attended tickets (Atendidos)
+        renderAttended(data.attended || []);
+      } catch (e) {}
+    }
+
+    function renderUpcoming(list) {
+      const container = document.getElementById('upcoming-container');
+      document.getElementById('upcoming-count').textContent = list.length;
+
+      if (list.length === 0) {
+        container.innerHTML = '<div class="flow-item"><span class="flow-ticket text-muted">--</span><span class="flow-meta">No hay turnos en espera</span></div>';
+        return;
+      }
+
+      container.innerHTML = list.map((t, idx) => `
+        <div class="flow-item ${t.is_preferential ? 'is-pref' : ''}">
+          <div>
+            <span class="flow-ticket ${t.is_preferential ? 'is-pref' : ''}">${t.number}</span>
+            ${t.is_preferential ? '<i class="fa-solid fa-wheelchair" style="color:#fbbf24; margin-left:6px;" title="Preferencial"></i>' : ''}
+            ${t.transferredFrom ? '<i class="fa-solid fa-arrow-right-arrow-left" style="color:#818cf8; margin-left:6px;" title="Derivado"></i>' : ''}
+          </div>
+          <div class="flow-meta">
+            <strong>${t.service?.name || 'Consulta'}</strong>
+            <small>Posición #${idx + 1}</small>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderAttended(list) {
+      const container = document.getElementById('attended-container');
+      document.getElementById('attended-count').textContent = list.length;
+
+      if (list.length === 0) {
+        container.innerHTML = '<div class="flow-item"><span class="flow-ticket text-muted">--</span><span class="flow-meta">Sin turnos previos</span></div>';
+        return;
+      }
+
+      container.innerHTML = list.map(t => `
+        <div class="flow-item">
+          <span class="flow-ticket" style="color:#94a3b8;">${t.number}</span>
+          <div class="flow-meta">
+            <span>${t.counter?.name || 'Atendido'}</span>
+            <small>${t.attended_at ? new Date(t.attended_at).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) : ''}</small>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function loadAnnouncements() {
+      try {
+        const res = await MT.api('/announcements?active=true').catch(() => []);
+        if (res && res.length > 0) {
+          const text = res.map(a => `📌 ${a.title.toUpperCase()}: ${a.body}`).join('    ✦    ');
+          const tickerEl = document.getElementById('ticker-text');
+          if (tickerEl) {
+            tickerEl.textContent = text;
+            tickerEl.style.color = '#000000';
+            // Calcular velocidad de desplazamiento pausada para lectura óptima
+            const duration = Math.max(45, Math.round(text.length * 0.35));
+            tickerEl.style.animationDuration = `${duration}s`;
+          }
+        }
+      } catch (e) {}
+    }
+
+    async function onNewCall(ticket, counterName, forcedCallByMode = null) {
+      if (!ticket) return;
+
+      // Filter out calls that don't match the dedicated screen type (e.g., administrative TV ignoring public queue calls)
+      if (displayTypeFilter && ticket?.service?.type && ticket.service.type !== displayTypeFilter) {
+        return;
+      }
+
+      const heroTicket = document.getElementById('hero-ticket');
+      const heroService = document.getElementById('hero-service');
+      const heroCounter = document.getElementById('hero-counter');
+      const heroCard = document.getElementById('hero-card');
+      const heroClient = document.getElementById('hero-client-name');
+
+      const name = counterName || ticket.counter?.name || 'Ventanilla';
+      heroTicket.textContent = ticket.number;
+      if (heroService) heroService.textContent = ticket.service?.name || 'Área de Servicio';
+      heroCounter.textContent = name;
+      heroTicket.className = 'hero-ticket-num' + (ticket.is_preferential ? ' is-pref' : '');
+
+      if (heroClient) {
+        if (ticket.client_name) {
+          heroClient.textContent = `Usuario: ${ticket.client_name}`;
+          heroClient.style.display = 'block';
+        } else {
+          heroClient.style.display = 'none';
+        }
+      }
+
+      // Glow animation
+      heroCard.classList.add('calling-anim');
+      setTimeout(() => heroCard.classList.remove('calling-anim'), 7000);
+
+      // Audio Ducking: mute or lower multimedia volume while announcing
+      duckMediaVolume(true);
+
+      // Audio Chime & Natural TTS Speech
+      if (audioAllowed) {
+        try {
+          const chimeEnabled = window.MT_SETTINGS?.tts_chime_enabled !== 'false' && window.MT_SETTINGS?.tts_chime_enabled !== 'No';
+          if (chimeEnabled) {
+            await MT.playChime();
+          }
+          const counterStr = counterName || ticket.counter?.name || 'Ventanilla';
+          const callByMode = forcedCallByMode || window.MT_SETTINGS?.call_by_mode || (ticket.client_name ? 'name' : 'number');
+
+          await MT.speakTicketTemplate(ticket, counterStr, {
+            templateNormal: window.MT_SETTINGS?.tts_template_normal,
+            templatePref: window.MT_SETTINGS?.tts_template_preferential,
+            token: window.MT_SETTINGS?.voice_token_translation || 'Turno',
+            rate: window.MT_SETTINGS?.tts_rate,
+            repeats: window.MT_SETTINGS?.tts_repeats || 1,
+            callByMode
+          });
+        } catch (e) {
+          console.warn('Error en reproducción TTS:', e);
+        } finally {
+          duckMediaVolume(false);
+        }
+      } else {
+        setTimeout(() => duckMediaVolume(false), 4000);
+      }
+    }
+
+    // ── Universal Multimedia Player Engine & Announcement Carousel ──────
+    let carouselTimer = null;
+    let carouselIndex = 0;
+    let carouselAnnouncements = [];
+
+    async function startAnnouncementCarousel() {
+      clearTimeout(carouselTimer);
+      try {
+        const list = await MT.api('/announcements?active=true').catch(() => []);
+        if (!list || list.length === 0) {
+          const container = document.getElementById('media-player-container');
+          if (container) {
+            container.innerHTML = `
+              <div style="color:#94a3b8; font-size:15px; text-align:center; padding:30px; font-family:'Outfit',sans-serif;">
+                <i class="fa-solid fa-scroll" style="font-size:48px; color:#38bdf8; margin-bottom:14px; display:block;"></i>
+                <strong style="font-size:18px; color:#fff; display:block; margin-bottom:6px;">Carrusel de Anuncios e Información</strong>
+                <p style="font-size:13px; color:#64748b; max-width:380px; margin:0 auto;">
+                  Agregue avisos o imágenes en el módulo de Anuncios para transmitir en esta pantalla.
+                </p>
+              </div>
+            `;
+          }
+          return;
+        }
+
+        carouselAnnouncements = list;
+        showCarouselSlide();
+      } catch (e) {}
+    }
+
+    function showCarouselSlide() {
+      clearTimeout(carouselTimer);
+      if (!carouselAnnouncements || carouselAnnouncements.length === 0) return;
+
+      if (carouselIndex >= carouselAnnouncements.length) {
+        carouselIndex = 0;
+      }
+
+      const ann = carouselAnnouncements[carouselIndex];
+      const container = document.getElementById('media-player-container');
+      if (!container) return;
+
+      const duration = (ann.duration_seconds || 15) * 1000;
+
+      if (ann.media_url && ann.media_type === 'video') {
+        container.innerHTML = `
+          <div style="position:relative; width:100%; height:100%; background:#000;">
+            <video id="media-video" controls autoplay muted playsinline style="width:100%; height:100%; object-fit:cover;">
+              <source src="${ann.media_url}">
+            </video>
+            <div style="position:absolute; bottom:0; inset-x:0; background:linear-gradient(to top, rgba(0,0,0,0.9), transparent); padding:20px; color:#fff;">
+              <h3 style="font-size:22px; font-weight:800; color:#38bdf8; margin-bottom:4px;">${ann.title}</h3>
+              <p style="font-size:15px; color:#cbd5e1; margin:0;">${ann.body}</p>
+            </div>
+          </div>
+        `;
+      } else if (ann.media_url && ann.media_type === 'image') {
+        container.innerHTML = `
+          <div style="position:relative; width:100%; height:100%; background:#090d16; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+            <img src="${ann.media_url}" style="width:100%; height:100%; object-fit:contain;" alt="${ann.title}">
+            <div style="position:absolute; bottom:0; inset-x:0; background:linear-gradient(to top, rgba(6,13,26,0.95) 0%, rgba(6,13,26,0.7) 70%, transparent 100%); padding:24px 28px; color:#fff;">
+              <span style="font-size:12px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:1px; display:inline-block; margin-bottom:4px;">
+                <i class="fa-solid fa-bullhorn"></i> Información Institucional (${carouselIndex + 1}/${carouselAnnouncements.length})
+              </span>
+              <h2 style="font-size:24px; font-weight:800; color:#fff; margin-bottom:6px; font-family:'Outfit',sans-serif;">${ann.title}</h2>
+              <p style="font-size:15px; color:#e2e8f0; margin:0; line-height:1.4;">${ann.body}</p>
+            </div>
+          </div>
+        `;
+      } else {
+        container.innerHTML = `
+          <div style="width:100%; height:100%; background:linear-gradient(135deg, #0f172a 0%, #0369a1 100%); padding:36px; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; color:#fff; box-sizing:border-box;">
+            <div style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); width:64px; height:64px; border-radius:18px; display:flex; align-items:center; justify-content:center; font-size:28px; color:#38bdf8; margin-bottom:16px;">
+              <i class="fa-solid fa-bullhorn"></i>
+            </div>
+            <span style="font-size:13px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:1.5px; margin-bottom:8px;">
+              Aviso Institucional (${carouselIndex + 1}/${carouselAnnouncements.length})
+            </span>
+            <h2 style="font-size:28px; font-weight:800; color:#ffffff; margin-bottom:12px; font-family:'Outfit',sans-serif; max-width:80%;">${ann.title}</h2>
+            <p style="font-size:18px; color:#e0f2fe; line-height:1.6; max-width:85%; margin:0;">${ann.body}</p>
+          </div>
+        `;
+      }
+
+      carouselIndex++;
+      carouselTimer = setTimeout(showCarouselSlide, duration);
+    }
+
+    function renderMediaPlayer(url) {
+      if (!url || url === 'announcements' || url === 'carousel') {
+        startAnnouncementCarousel();
+        return;
+      }
+      clearTimeout(carouselTimer);
+      const container = document.getElementById('media-player-container');
+
+      // 1. YouTube (Playlist o Video)
+      if (url.includes('youtube.com') || url.includes('youtu.be')) {
+        if (url.includes('list=')) {
+          const playlistId = url.split('list=')[1]?.split('&')[0];
+          if (playlistId) {
+            container.innerHTML = `
+              <iframe id="media-frame" 
+                src="https://www.youtube.com/embed/videoseries?list=${playlistId}&autoplay=1&mute=1&loop=1&enablejsapi=1"
+                allow="autoplay; encrypted-media" allowfullscreen>
+              </iframe>
+            `;
+            return;
+          }
+        }
+
+        let videoId = '';
+        if (url.includes('youtu.be/')) {
+          videoId = url.split('youtu.be/')[1]?.split('?')[0];
+        } else if (url.includes('v=')) {
+          videoId = url.split('v=')[1]?.split('&')[0];
+        } else if (url.includes('embed/')) {
+          videoId = url.split('embed/')[1]?.split('?')[0];
+        }
+
+        if (videoId) {
+          container.innerHTML = `
+            <iframe id="media-frame" 
+              src="https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&enablejsapi=1"
+              allow="autoplay; encrypted-media" allowfullscreen>
+            </iframe>
+          `;
+          return;
+        }
+      }
+
+      // 2. Spotify
+      if (url.includes('spotify.com')) {
+        const embedUrl = url.replace('spotify.com/', 'spotify.com/embed/');
+        container.innerHTML = `<iframe id="media-frame" src="${embedUrl}" allow="encrypted-media"></iframe>`;
+        return;
+      }
+
+      // 3. Direct Video File (.mp4, .webm, .ogg)
+      if (url.match(/\.(mp4|webm|ogg)($|\?)/i)) {
+        const sanitizedUrl = url.replace(/'/g, "\\'");
+        container.innerHTML = `
+          <video id="media-video" controls autoplay muted loop playsinline
+            style="width:100%; height:100%; object-fit:cover;"
+            onerror="onMediaVideoError(this, '${sanitizedUrl}')">
+            <source src="${url}">
+            Tu navegador no soporta reproducción de video.
+          </video>
+        `;
+        return;
+      }
+
+      // 4. Intranet / Web Page Player (Vía Proxy Backend para evitar bloqueos CSP frame-ancestors)
+      const proxyUrl = `${MT.apiBase}/media/proxy?url=${encodeURIComponent(url)}`;
+      container.innerHTML = `
+        <iframe id="media-frame"
+          src="${proxyUrl}"
+          allow="autoplay; encrypted-media; fullscreen"
+          style="width:100%; height:100%; border:none; background:#000;">
+        </iframe>
+      `;
+    }
+
+    function onMediaVideoError(videoEl, url) {
+      console.warn('[Multimedia] No se pudo cargar el archivo de video:', url);
+      const container = document.getElementById('media-player-container');
+      if (container) {
+        container.innerHTML = `
+          <div style="color:#cbd5e1; font-size:14px; text-align:center; padding:30px; font-family:'Inter',sans-serif;">
+            <i class="fa-solid fa-triangle-exclamation" style="font-size:42px; color:#f59e0b; margin-bottom:12px; display:block;"></i>
+            <strong style="font-size:16px; color:#fff; display:block; margin-bottom:6px;">No se pudo reproducir el contenido multimedia</strong>
+            <p style="font-size:13px; color:#94a3b8; max-width:380px; margin:0 auto 16px;">
+              El video no está disponible o requiere estar conectado a la red local/intranet institucional.
+            </p>
+            <button class="btn btn-primary text-xs" onclick="openMediaModal()">
+              <i class="fa-solid fa-gear"></i> Cambiar o Seleccionar Origen
+            </button>
+          </div>
+        `;
+      }
+    }
+
+    function duckMediaVolume(mute) {
+      const video = document.getElementById('media-video');
+      if (video) {
+        video.muted = mute;
+      }
+    }
+
+    // Modal helpers
+    function openMediaModal() {
+      document.getElementById('media-url-input').value = currentMediaUrl;
+      document.getElementById('media-modal').style.display = 'flex';
+    }
+    function closeMediaModal() {
+      document.getElementById('media-modal').style.display = 'none';
+    }
+    function setPresetMedia(url) {
+      document.getElementById('media-url-input').value = url;
+    }
+    function saveMediaUrl() {
+      const url = document.getElementById('media-url-input').value.trim();
+      currentMediaUrl = url;
+      localStorage.setItem('miturno_media_url', url);
+      renderMediaPlayer(url);
+      closeMediaModal();
+    }
+  </script>
+</body>
+</html>

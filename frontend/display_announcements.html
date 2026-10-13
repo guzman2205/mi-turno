@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi turno — Pantalla de Anuncios, Comunicados y Flyers</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: #040914;
+      color: #ffffff;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    /* Top Bar */
+    .flyer-header {
+      background: #0a1324;
+      padding: 16px 36px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #1e293b;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      z-index: 10;
+    }
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .header-logo { font-size: 34px; color: #38bdf8; }
+    .header-title h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
+    .header-title h1 span { color: #38bdf8; }
+    .header-title p { font-family: 'Inter', sans-serif; font-size: 13px; color: #94a3b8; margin-top: 2px; }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .live-tag {
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(139, 92, 246, 0.2); border: 1px solid rgba(139, 92, 246, 0.4);
+      color: #c084fc; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 800;
+      padding: 6px 16px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.8px;
+    }
+    .pulse-dot { width: 10px; height: 10px; background: #c084fc; border-radius: 50%; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(0.8); } }
+    .header-clock { font-size: 30px; font-weight: 800; color: #f8fafc; font-family: 'Outfit', sans-serif; }
+
+    /* Main Container */
+    .flyer-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 24px 36px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Active Flyer Card */
+    .flyer-card {
+      flex: 1;
+      background: linear-gradient(145deg, #0e1a30 0%, #081021 100%);
+      border: 2px solid #3b82f6;
+      border-radius: 28px;
+      padding: 36px;
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
+      gap: 36px;
+      align-items: center;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.6), inset 0 0 40px rgba(59,130,246,0.1);
+      position: relative;
+      overflow: hidden;
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+
+    /* Single Column Layout when no image/video */
+    .flyer-card.no-media {
+      grid-template-columns: 1fr;
+      text-align: center;
+      justify-content: center;
+      padding: 48px 64px;
+    }
+
+    .flyer-badge-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .flyer-badge {
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: #38bdf8;
+      padding: 6px 16px;
+      border-radius: 30px;
+      font-size: 13px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .flyer-title {
+      font-size: 42px;
+      font-weight: 900;
+      color: #ffffff;
+      line-height: 1.15;
+      margin-bottom: 20px;
+      letter-spacing: -0.5px;
+      text-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+
+    .flyer-body {
+      font-family: 'Inter', sans-serif;
+      font-size: 22px;
+      color: #cbd5e1;
+      line-height: 1.6;
+      font-weight: 400;
+    }
+
+    /* Media Box Right Column */
+    .flyer-media-box {
+      width: 100%;
+      height: 100%;
+      min-height: 420px;
+      border-radius: 20px;
+      overflow: hidden;
+      background: #020610;
+      border: 1px solid #1e293b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+      padding: 12px;
+      position: relative;
+    }
+    .flyer-media-box img {
+      max-width: 100%;
+      max-height: 100%;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      border-radius: 12px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.6);
+    }
+    .flyer-media-box video, .flyer-media-box iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      border-radius: 12px;
+    }
+
+    /* Bottom Bar & Progress Bar */
+    .flyer-bottom-bar {
+      margin-top: 20px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .progress-bar-wrap {
+      flex: 1;
+      height: 8px;
+      background: #1e293b;
+      border-radius: 10px;
+      overflow: hidden;
+      position: relative;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #38bdf8, #8b5cf6);
+      transition: width 0.1s linear;
+      border-radius: 10px;
+    }
+    .flyer-counter-badge {
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      font-weight: 800;
+      color: #94a3b8;
+      background: #0f172a;
+      padding: 6px 16px;
+      border-radius: 12px;
+      border: 1px solid #1e293b;
+    }
+
+    /* Bottom Running Marquee Banner */
+    .flyer-ticker-footer {
+      background: #0284c7;
+      color: #ffffff;
+      padding: 12px 36px;
+      font-size: 18px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      overflow: hidden;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.3);
+    }
+    .ticker-icon {
+      background: #ffffff;
+      color: #0284c7;
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    .ticker-text {
+      white-space: nowrap;
+      animation: tickerScroll 25s linear infinite;
+    }
+    @keyframes tickerScroll {
+      0% { transform: translateX(100%); }
+      100% { transform: translateX(-100%); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Topbar Header -->
+  <header class="flyer-header">
+    <div class="header-brand">
+      <i class="fa-solid fa-layer-group header-logo"></i>
+      <div class="header-title">
+        <h1>Mi <span>turno</span></h1>
+        <p id="company-subtitle">Pantalla de Anuncios, Promociones y Avisos Institucionales</p>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="live-tag">
+        <span class="pulse-dot"></span> FLYERS EN VIVO
+      </div>
+      <button type="button" onclick="toggleFullscreen()" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#fff; padding:8px 16px; border-radius:12px; font-size:13px; font-weight:700; cursor:pointer;" title="Pantalla Completa (F11)">
+        <i class="fa-solid fa-expand"></i> Fullscreen
+      </button>
+      <div class="header-clock" id="clock-display">--:--:--</div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flyer-container">
+
+    <!-- Dynamic Active Flyer Card -->
+    <div class="flyer-card" id="flyer-active-card">
+      <div>
+        <div class="flyer-badge-bar">
+          <span class="flyer-badge" id="flyer-badge-label"><i class="fa-solid fa-scroll"></i> COMUNICADO OFICIAL</span>
+        </div>
+        <h2 class="flyer-title" id="flyer-title-text">Cargando Anuncios y Promociones...</h2>
+        <div class="flyer-body" id="flyer-body-text">El sistema está sincronizando la lista de promociones en tiempo real.</div>
+      </div>
+
+      <div class="flyer-media-box" id="flyer-media-container" style="display:none;">
+        <!-- Image / Video will load here -->
+      </div>
+    </div>
+
+    <!-- Progress Bar Controls -->
+    <div class="flyer-bottom-bar">
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" id="progress-bar"></div>
+      </div>
+      <div class="flyer-counter-badge" id="flyer-index-badge">
+        Anuncio 1 de 1
+      </div>
+    </div>
+  </main>
+
+  <!-- Bottom Running Ticker -->
+  <footer class="flyer-ticker-footer">
+    <span class="ticker-icon"><i class="fa-solid fa-bullhorn"></i> AVISO</span>
+    <div class="ticker-text" id="ticker-text-content">
+      Bienvenido a nuestra institución. Manténgase atento a nuestra pantalla para anuncios importantes y avisos de interés general.
+    </div>
+  </footer>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="app.js"></script>
+  <script>
+    let announcementsList = [];
+    let currentIndex = 0;
+    let timerInterval = null;
+    let progressInterval = null;
+    let durationSeconds = 15;
+    let elapsedMs = 0;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      startClock();
+      await loadSettings();
+      await loadAnnouncements();
+
+      if (MT.socket) {
+        MT.socket.on('announcements:changed', () => {
+          console.log('🔄 Sincronizando anuncios en tiempo real...');
+          loadAnnouncements();
+        });
+      }
+    });
+
+    function startClock() {
+      const clockEl = document.getElementById('clock-display');
+      setInterval(() => {
+        const now = new Date();
+        if (clockEl) clockEl.textContent = now.toLocaleTimeString('es-ES');
+      }, 1000);
+    }
+
+    async function loadSettings() {
+      try {
+        const settings = await MT.api('/settings').catch(() => ({}));
+        if (settings.company_name) {
+          document.getElementById('company-subtitle').textContent = `${settings.company_name} — Pantalla de Anuncios y Flyers`;
+        }
+        if (settings.notification_text) {
+          document.getElementById('ticker-text-content').textContent = settings.notification_text;
+        }
+      } catch (e) {}
+    }
+
+    async function loadAnnouncements() {
+      try {
+        announcementsList = await MT.api('/announcements?active=true').catch(() => []);
+        if (!announcementsList || announcementsList.length === 0) {
+          showEmptyState();
+          return;
+        }
+        currentIndex = 0;
+        renderActiveFlyer();
+      } catch (e) {
+        showEmptyState();
+      }
+    }
+
+    function showEmptyState() {
+      const card = document.getElementById('flyer-active-card');
+      card.classList.add('no-media');
+      document.getElementById('flyer-badge-label').innerHTML = '<i class="fa-solid fa-info-circle"></i> INFORMACIÓN INSTITUCIONAL';
+      document.getElementById('flyer-title-text').textContent = 'Bienvenido a nuestra institución';
+      document.getElementById('flyer-body-text').textContent = 'Por favor consulte en recepción para más información sobre nuestros servicios, horarios y promociones.';
+      document.getElementById('flyer-media-container').style.display = 'none';
+      document.getElementById('flyer-index-badge').textContent = 'Anuncio 1 de 1';
+      document.getElementById('progress-bar').style.width = '100%';
+    }
+
+    function renderActiveFlyer() {
+      if (!announcementsList || announcementsList.length === 0) return;
+
+      const a = announcementsList[currentIndex];
+      const card = document.getElementById('flyer-active-card');
+      const mediaBox = document.getElementById('flyer-media-container');
+
+      durationSeconds = a.duration_seconds || 15;
+
+      document.getElementById('flyer-title-text').textContent = a.title || 'Anuncio Institucional';
+      document.getElementById('flyer-body-text').textContent = a.body || '';
+      document.getElementById('flyer-index-badge').textContent = `Flyer ${currentIndex + 1} de ${announcementsList.length}`;
+
+      // Badge tag
+      const isVideo = a.media_type === 'video' || (a.media_url && a.media_url.match(/\.(mp4|webm)|youtube|vimeo/i));
+      document.getElementById('flyer-badge-label').innerHTML = isVideo
+        ? '<i class="fa-solid fa-video"></i> VIDEO PUBLICITARIO'
+        : '<i class="fa-solid fa-image"></i> AFICHE / FLYER PROMOCIONAL';
+
+      // Media URL
+      if (a.media_url && a.media_url.trim()) {
+        card.classList.remove('no-media');
+        mediaBox.style.display = 'flex';
+
+        if (isVideo) {
+          if (a.media_url.includes('youtube.com') || a.media_url.includes('youtu.be')) {
+            let embedUrl = a.media_url.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/');
+            if (!embedUrl.includes('autoplay=1')) embedUrl += '?autoplay=1&mute=1&loop=1';
+            mediaBox.innerHTML = `<iframe src="${embedUrl}" allow="autoplay"></iframe>`;
+          } else {
+            const proxyUrl = `${MT.apiBase}/media/proxy?url=${encodeURIComponent(a.media_url)}`;
+            mediaBox.innerHTML = `<video src="${proxyUrl}" autoplay loop muted playsinline></video>`;
+          }
+        } else {
+          const proxyUrl = `${MT.apiBase}/media/proxy?url=${encodeURIComponent(a.media_url)}`;
+          mediaBox.innerHTML = `<img src="${proxyUrl}" alt="${a.title}" onerror="this.src='${a.media_url}'">`;
+        }
+      } else {
+        card.classList.add('no-media');
+        mediaBox.style.display = 'none';
+        mediaBox.innerHTML = '';
+      }
+
+      startProgressBar();
+    }
+
+    function startProgressBar() {
+      if (progressInterval) clearInterval(progressInterval);
+      if (timerInterval) clearTimeout(timerInterval);
+
+      const bar = document.getElementById('progress-bar');
+      bar.style.width = '0%';
+      elapsedMs = 0;
+      const totalMs = durationSeconds * 1000;
+
+      progressInterval = setInterval(() => {
+        elapsedMs += 100;
+        const pct = Math.min(100, (elapsedMs / totalMs) * 100);
+        bar.style.width = `${pct}%`;
+      }, 100);
+
+      timerInterval = setTimeout(() => {
+        nextFlyer();
+      }, totalMs);
+    }
+
+    function nextFlyer() {
+      if (!announcementsList || announcementsList.length === 0) return;
+      currentIndex = (currentIndex + 1) % announcementsList.length;
+      renderActiveFlyer();
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        if (document.exitFullscreen) document.exitFullscreen();
+      }
+    }
+  </script>
+</body>
+</html>

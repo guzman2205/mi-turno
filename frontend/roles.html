@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi turno — Permisos y Roles de Usuario</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="styles.css?v=2.0">
+  <style>
+    .roles-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+    }
+    .role-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .perm-chip {
+      background: #f1f5f9;
+      color: #334155;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 2px;
+    }
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    .modal-card {
+      background: #ffffff;
+      border-radius: 20px;
+      max-width: 520px;
+      width: 90%;
+      padding: 28px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+    }
+  </style>
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <div id="sidebar-container"></div>
+
+    <main class="app-main">
+      <div id="topbar-container"></div>
+
+      <div class="content-body">
+        <div class="card p-4 mb-4 flex-between" style="flex-wrap:wrap; gap:16px;">
+          <div class="flex-align gap-3">
+            <i class="fa-solid fa-user-shield text-primary font-24"></i>
+            <div>
+              <h3 class="mb-0">Gestión de Roles y Permisos Granulares</h3>
+              <p class="text-muted text-sm mb-0">Asignación de privilegios de acceso por perfil de usuario</p>
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="openCreateModal()"><i class="fa-solid fa-plus"></i> Crear Nuevo Rol</button>
+        </div>
+
+        <div class="roles-grid" id="roles-container">
+          <div class="text-muted p-4"><i class="fa-solid fa-spinner fa-spin"></i> Cargando roles...</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal Crear / Editar Rol -->
+  <div class="modal-overlay" id="role-modal" onclick="if(event.target===this) closeModal()">
+    <div class="modal-card">
+      <div class="flex-between mb-3">
+        <h3 id="modal-title"><i class="fa-solid fa-user-shield text-primary"></i> Crear Rol</h3>
+        <button style="border:none; background:none; font-size:20px; cursor:pointer;" onclick="closeModal()">✕</button>
+      </div>
+
+      <input type="hidden" id="role-id">
+
+      <div class="form-group mb-3">
+        <label class="form-label" for="role-name">Nombre del Rol:</label>
+        <input type="text" id="role-name" class="form-input" placeholder="Ej: Supervisor de Puesto">
+      </div>
+
+      <div class="form-group mb-3">
+        <label class="form-label" for="role-desc">Descripción:</label>
+        <input type="text" id="role-desc" class="form-input" placeholder="Ej: Acceso a llamadas, reasignación y reportes de atención">
+      </div>
+
+      <div class="form-group mb-4">
+        <div class="flex-between mb-2">
+          <label class="form-label mb-0" style="font-weight:700;">Permisos de Acceso Módulos:</label>
+          <div style="display:flex; gap:6px;">
+            <button type="button" class="btn btn-xs btn-secondary" onclick="selectAllPerms(true)">Todos</button>
+            <button type="button" class="btn btn-xs btn-secondary" onclick="selectAllPerms(false)">Ninguno</button>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; max-height:220px; overflow-y:auto; padding:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px;">
+          <label style="font-size:12px; font-weight:600;"><input type="checkbox" class="perm-checkbox" value="tickets:view"> 🎫 Ver Turnos y Colas</label>
+          <label style="font-size:12px; font-weight:600;"><input type="checkbox" class="perm-checkbox" value="tickets:call"> 📢 Llamar Turnos / Operador</label>
+          <label style="font-size:12px; font-weight:600;"><input type="checkbox" class="perm-checkbox" value="tickets:transfer"> ↩ Transferir / Derivar Turnos</label>
+          <label style="font-size:12px; font-weight:600;"><input type="checkbox" class="perm-checkbox" value="tickets:create"> ➕ Emitir Turno Presencial</label>
+          <label style="font-size:12px; font-weight:600;"><input type="checkbox" class="perm-checkbox" value="appointments:manage"> 📅 Citas y Recepción Secretaría</label>
+          <label style="font-size:12px; font-weight:600;"><input type="checkbox" class="perm-checkbox" value="departments:manage"> 🏢 Gestionar Departamentos</label>
+          <label style="font-size:12px; font-weight:600;"><input type="checkbox" class="perm-checkbox" value="services:manage"> 💼 Gestionar Servicios</label>
+          <label style="font-size:12px; font-weight:600;"><input type="checkbox" class="perm-checkbox" value="counters:manage"> 💻 Gestionar Mostradores</label>
+          <label style="font-size:12px; font-weight:600;"><input type="checkbox" class="perm-checkbox" value="users:manage"> 👥 Gestionar Usuarios y Personal</label>
+          <label style="font-size:12px; font-weight:600;"><input type="checkbox" class="perm-checkbox" value="roles:manage"> 🛡️ Permisos y Roles</label>
+          <label style="font-size:12px; font-weight:600;"><input type="checkbox" class="perm-checkbox" value="announcements:manage"> 📜 Anuncios en Pantalla</label>
+          <label style="font-size:12px; font-weight:600;"><input type="checkbox" class="perm-checkbox" value="reports:view"> 📈 Reportes y Métricas</label>
+          <label style="font-size:12px; font-weight:600;"><input type="checkbox" class="perm-checkbox" value="settings:edit"> ⚙️ Ajustes del Sistema</label>
+          <label style="font-size:12px; font-weight:600;"><input type="checkbox" class="perm-checkbox" value="logs:view"> 🛡️ Auditoría y Logs</label>
+        </div>
+      </div>
+
+      <div class="flex-between">
+        <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveRole()"><i class="fa-solid fa-check"></i> Guardar Rol</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="app.js"></script>
+  <script>
+    let rolesList = [];
+
+    document.addEventListener('DOMContentLoaded', () => {
+      MT.renderSidebar('users');
+      MT.renderTopbar('Permisos y Roles', 'Definición de perfiles y accesos');
+      loadRoles();
+    });
+
+    async function loadRoles() {
+      try {
+        rolesList = await MT.api('/roles').catch(() => []);
+        renderRoles(rolesList);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function renderRoles(list) {
+      const container = document.getElementById('roles-container');
+      if (!list || list.length === 0) {
+        container.innerHTML = '<div class="text-muted p-4">No hay roles registrados.</div>';
+        return;
+      }
+
+      container.innerHTML = list.map(r => `
+        <div class="role-card">
+          <div>
+            <div class="flex-between mb-2">
+              <strong style="font-size:18px; color:#0f172a;">${r.name}</strong>
+              <span class="badge-count">ID #${r.id}</span>
+            </div>
+            <p class="text-muted text-sm mb-3">${r.description || 'Sin descripción'}</p>
+            <div class="mb-4">
+              <span class="text-xs text-muted" style="display:block; margin-bottom:4px; font-weight:700;">PERMISOS:</span>
+              ${Array.isArray(r.permissions) && r.permissions.length > 0
+                ? r.permissions.map(p => `<span class="perm-chip">${p}</span>`).join('')
+                : '<span class="text-xs text-muted">Permisos generales</span>'
+              }
+            </div>
+          </div>
+          <div class="flex-align gap-2">
+            <button class="btn btn-xs btn-secondary" onclick="openEditModal(${r.id})"><i class="fa-solid fa-pen"></i> Editar</button>
+            ${['admin', 'agente', 'administrador'].includes(r.name.toLowerCase()) ? '' : `
+              <button class="btn btn-xs btn-danger" onclick="deleteRole(${r.id})"><i class="fa-solid fa-trash"></i> Eliminar</button>
+            `}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function selectAllPerms(check) {
+      document.querySelectorAll('.perm-checkbox').forEach(cb => cb.checked = check);
+    }
+
+    function openCreateModal() {
+      document.getElementById('role-id').value = '';
+      document.getElementById('modal-title').innerHTML = '<i class="fa-solid fa-user-shield text-primary"></i> Crear Rol';
+      document.getElementById('role-name').value = '';
+      document.getElementById('role-desc').value = '';
+      document.querySelectorAll('.perm-checkbox').forEach(cb => cb.checked = false);
+      document.getElementById('role-modal').style.display = 'flex';
+    }
+
+    function openEditModal(id) {
+      const role = rolesList.find(r => r.id === id);
+      if (!role) return;
+      document.getElementById('role-id').value = role.id;
+      document.getElementById('modal-title').innerHTML = '<i class="fa-solid fa-pen text-primary"></i> Editar Rol';
+      document.getElementById('role-name').value = role.name;
+      document.getElementById('role-desc').value = role.description || '';
+
+      const perms = Array.isArray(role.permissions) ? role.permissions : [];
+      document.querySelectorAll('.perm-checkbox').forEach(cb => {
+        cb.checked = perms.includes(cb.value);
+      });
+
+      document.getElementById('role-modal').style.display = 'flex';
+    }
+
+    function closeModal() {
+      document.getElementById('role-modal').style.display = 'none';
+    }
+
+    async function saveRole() {
+      const id = document.getElementById('role-id').value;
+      const name = document.getElementById('role-name').value.trim();
+      const description = document.getElementById('role-desc').value.trim();
+
+      const permissions = [];
+      document.querySelectorAll('.perm-checkbox:checked').forEach(cb => {
+        permissions.push(cb.value);
+      });
+
+      if (!name) {
+        MT.toast('Nombre del rol es requerido', 'error');
+        return;
+      }
+
+      try {
+        if (id) {
+          await MT.api(`/roles/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ name, description, permissions })
+          });
+          MT.toast('Rol actualizado', 'success');
+        } else {
+          await MT.api('/roles', {
+            method: 'POST',
+            body: JSON.stringify({ name, description, permissions })
+          });
+          MT.toast('Rol creado exitosamente', 'success');
+        }
+        closeModal();
+        loadRoles();
+      } catch (err) {
+        MT.toast(err.message || 'Error al guardar rol', 'error');
+      }
+    }
+
+    async function deleteRole(id) {
+      if (!confirm('¿Desea eliminar este rol?')) return;
+      try {
+        await MT.api(`/roles/${id}`, { method: 'DELETE' });
+        MT.toast('Rol eliminado', 'info');
+        loadRoles();
+      } catch (err) {
+        MT.toast(err.message || 'Error al eliminar', 'error');
+      }
+    }
+  </script>
+</body>
+</html>

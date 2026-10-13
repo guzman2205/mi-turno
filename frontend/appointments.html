@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi turno — Panel de Citas Administrativas y Recepción</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="styles.css?v=2.0">
+  <style>
+    .appointments-layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+    .booking-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 20px;
+      padding: 32px;
+      max-width: 680px;
+      margin: 0 auto;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+    }
+    .confirmation-box {
+      background: #f0fdf4;
+      border: 2px solid #22c55e;
+      border-radius: 16px;
+      padding: 24px;
+      text-align: center;
+      margin-top: 20px;
+    }
+    .confirmation-code {
+      font-size: 38px;
+      font-weight: 900;
+      color: #15803d;
+      letter-spacing: 4px;
+      margin: 10px 0;
+    }
+    .secretary-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+    }
+    .appt-row-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      transition: all 0.2s ease;
+    }
+    .appt-row-card.checked-in {
+      border-color: #38bdf8;
+      background: rgba(224, 242, 254, 0.4);
+    }
+    .appt-row-card.called {
+      border-color: #10b981;
+      background: rgba(220, 252, 231, 0.4);
+    }
+    .appt-row-card.converted {
+      border-color: #818cf8;
+      background: rgba(238, 242, 255, 0.5);
+    }
+    @media print {
+      body * { visibility: hidden !important; }
+      #printable-appointment, #printable-appointment * { visibility: visible !important; }
+      #printable-appointment {
+        display: block !important;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <div id="sidebar-container"></div>
+
+    <main class="app-main">
+      <div id="topbar-container"></div>
+
+      <div class="content-body">
+        <!-- Navigation Tabs -->
+        <div style="display:flex; border-bottom:2px solid #e2e8f0; margin-bottom:24px; gap:8px;">
+          <button type="button" class="btn btn-secondary" id="tab-btn-secretary" onclick="switchMainTab('secretary')" style="border-radius:12px 12px 0 0; background:#0284c7; color:#fff; border-bottom:none;">
+            <i class="fa-solid fa-headset"></i> Panel de Recepción y Citas (Secretaría)
+          </button>
+          <button type="button" class="btn btn-secondary" id="tab-btn-booking" onclick="switchMainTab('booking')" style="border-radius:12px 12px 0 0; background:transparent; color:#64748b; border:none;">
+            <i class="fa-solid fa-calendar-plus"></i> Agendar Nueva Cita
+          </button>
+        </div>
+
+        <!-- TAB 1: Panel de Recepción de Citas e Ingreso de Visitantes -->
+        <div id="tab-content-secretary">
+          <div class="secretary-card">
+            <!-- Header Banner: Active Office & Incumbent Controls -->
+            <div style="background:#0f172a; color:#fff; padding:18px 22px; border-radius:16px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; box-shadow:0 10px 25px rgba(15,23,42,0.15);">
+              <div>
+                <span style="font-size:11px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.8px; display:block; margin-bottom:2px;">
+                  <i class="fa-solid fa-building-user"></i> Puesto de Secretaría / Oficina Activa
+                </span>
+                <div id="active-sec-office-title" style="font-size:18px; font-weight:800; color:#ffffff; font-family:'Outfit',sans-serif;">
+                  Cargando Oficina...
+                </div>
+              </div>
+
+              <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                <button type="button" class="btn btn-primary" onclick="callNextOfficeAppointment()" style="background:#0284c7; border-color:#0284c7; padding:8px 16px; border-radius:10px; font-weight:800; font-size:13px;" title="Llamar automáticamente la siguiente cita en espera de mi oficina">
+                  <i class="fa-solid fa-bullhorn"></i> ⏩ Llamar Próximo Citado
+                </button>
+                <button type="button" onclick="openOfficeModal()" style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:#38bdf8; padding:8px 14px; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer;">
+                  <i class="fa-solid fa-pen"></i> Seleccionar / Cambiar
+                </button>
+                <button type="button" onclick="endSecWorkshift()" style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); color:#fca5a5; padding:8px 14px; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer;" title="Finalizar jornada de llamadas en recepción">
+                  <i class="fa-solid fa-right-from-bracket"></i> Finalizar Jornada
+                </button>
+              </div>
+            </div>
+
+            <div class="flex-between mb-4" style="flex-wrap:wrap; gap:16px;">
+              <div>
+                <h3 style="font-size:20px; font-weight:800; color:#0f172a; margin:0; font-family:'Outfit',sans-serif;">Agenda del Día — Citas e Ingreso Presencial</h3>
+                <p class="text-muted text-sm mb-0">Gestión de llegada de citados y registro de visitantes sin cita previa</p>
+              </div>
+              <div class="flex-align gap-2">
+                <button class="btn btn-success" onclick="openWalkInModal()"><i class="fa-solid fa-user-plus"></i> Registrar Visitante (Sin Cita)</button>
+                <button class="btn btn-secondary" onclick="loadTodayAppointments()"><i class="fa-solid fa-rotate-right"></i> Actualizar Agenda</button>
+              </div>
+            </div>
+
+            <!-- Filtro de Citas y Búsqueda -->
+            <div class="form-row mb-4" style="display:grid; grid-template-columns: 1fr 1fr 1fr 1.2fr; gap:12px; background:#f8fafc; padding:16px; border-radius:14px; border:1px solid #e2e8f0;">
+              <div>
+                <label class="form-label text-xs" style="font-weight:700;" for="sec-filter-date">Filtrar por Fecha:</label>
+                <input type="date" id="sec-filter-date" class="form-input" onchange="loadTodayAppointments()">
+              </div>
+              <div>
+                <label class="form-label text-xs" style="font-weight:700;" for="sec-filter-service">Filtrar por Oficina / Servicio:</label>
+                <select id="sec-filter-service" class="form-input" onchange="loadTodayAppointments()">
+                  <option value="">Todas las oficinas</option>
+                </select>
+              </div>
+              <div>
+                <label class="form-label text-xs" style="font-weight:700;" for="sec-filter-status">Filtrar por Estado:</label>
+                <select id="sec-filter-status" class="form-input" onchange="loadTodayAppointments()">
+                  <option value="">Todos los estados</option>
+                  <option value="confirmed">Confirmada (Pendiente Llegada)</option>
+                  <option value="checked_in">📌 Presente en Recepción</option>
+                  <option value="called">📢 Llamado por Secretaria</option>
+                  <option value="converted">🎫 Convertido a Turno</option>
+                </select>
+              </div>
+              <div>
+                <label class="form-label text-xs" style="font-weight:700;" for="sec-search-query">🔍 Buscar Cita / Usuario:</label>
+                <input type="text" id="sec-search-query" class="form-input" placeholder="Buscar por código, nombre o correo..." oninput="filterAppointmentsClientSide()">
+              </div>
+            </div>
+
+            <div id="secretary-list-container">
+              <div class="text-muted text-center py-4"><i class="fa-solid fa-spinner fa-spin"></i> Cargando agenda de citas...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 2: Formulario Público / Interno de Agendamiento -->
+        <div id="tab-content-booking" style="display:none;">
+          <div class="booking-card" id="booking-form-wrap">
+            <div class="text-center mb-4">
+              <i class="fa-solid fa-calendar-check text-primary" style="font-size: 42px;"></i>
+              <h2 class="mt-2" style="font-size:24px; font-weight:800;">Reserva de Cita Programada</h2>
+              <p class="text-muted text-sm">Agende su turno anticipadamente. El sistema enviará una confirmación por correo electrónico.</p>
+            </div>
+
+            <form id="appointment-form" onsubmit="submitAppointment(event)">
+              <div class="form-group mb-3">
+                <label class="form-label" for="appt-service">Oficina / Servicio Administrativo:</label>
+                <select id="appt-service" class="form-input" required>
+                  <option value="">Cargando oficinas...</option>
+                </select>
+              </div>
+
+              <div class="form-row mb-3" style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                <div>
+                  <label class="form-label" for="appt-date">Fecha de la Cita:</label>
+                  <input type="date" id="appt-date" class="form-input" required>
+                </div>
+                <div>
+                  <label class="form-label" for="appt-time">Hora Estimada:</label>
+                  <select id="appt-time" class="form-input" required>
+                    <option value="08:00">08:00 AM</option>
+                    <option value="08:30">08:30 AM</option>
+                    <option value="09:00">09:00 AM</option>
+                    <option value="09:30">09:30 AM</option>
+                    <option value="10:00">10:00 AM</option>
+                    <option value="10:30">10:30 AM</option>
+                    <option value="11:00">11:00 AM</option>
+                    <option value="11:30">11:30 AM</option>
+                    <option value="14:00">02:00 PM</option>
+                    <option value="14:30">02:30 PM</option>
+                    <option value="15:00">03:00 PM</option>
+                    <option value="15:30">03:30 PM</option>
+                    <option value="16:00">04:00 PM</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group mb-3">
+                <label class="form-label" for="appt-name">Nombre Completo del Solicitante:</label>
+                <input type="text" id="appt-name" class="form-input" placeholder="Ej: María Rodríguez" required>
+              </div>
+
+              <div class="form-row mb-3" style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                <div>
+                  <label class="form-label" for="appt-phone">Teléfono de Contacto (WhatsApp/SMS):</label>
+                  <input type="tel" id="appt-phone" class="form-input" placeholder="Ej: 809-555-0199">
+                </div>
+                <div>
+                  <label class="form-label" for="appt-email">Correo Electrónico (Para envío de confirmación):</label>
+                  <input type="email" id="appt-email" class="form-input" placeholder="ejemplo@correo.com">
+                </div>
+              </div>
+
+              <div class="form-group mb-4">
+                <label class="form-label" for="appt-notes">Notas Adicionales / Asunto (Opcional):</label>
+                <textarea id="appt-notes" class="form-input" rows="2" placeholder="Ej: Entrevista de trabajo, reunión de seguimiento o trámite institucional"></textarea>
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-block" style="width:100%; padding:14px; font-size:16px;">
+                <i class="fa-solid fa-paper-plane"></i> Agendar Cita y Enviar Correo
+              </button>
+            </form>
+
+            <div class="confirmation-box" id="confirmation-result" style="display:none;">
+              <i class="fa-solid fa-envelope-circle-check" style="font-size:48px; color:#22c55e;"></i>
+              <h3 class="mt-2" style="font-size:20px; color:#15803d; font-weight:800;">¡Cita Reservada Exitosamente!</h3>
+              <p class="text-muted text-sm mb-1">Se ha enviado la confirmación al correo. Presente este código al llegar:</p>
+              <div class="confirmation-code" id="result-code">------</div>
+              <p class="text-sm" id="result-details" style="color:#334155; font-weight:600;"></p>
+
+              <div style="display:flex; justify-content:center; gap:12px; margin-top:20px; flex-wrap:wrap;">
+                <button type="button" class="btn btn-primary" onclick="printAppointmentReceipt()" style="background:#0284c7; border-color:#0284c7; font-weight:800;">
+                  <i class="fa-solid fa-print"></i> Imprimir Comprobante de Cita
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="resendLastAppointmentEmail()">
+                  <i class="fa-solid fa-envelope"></i> Reenviar Correo
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="resetForm()">
+                  <i class="fa-solid fa-plus"></i> Agendar Otra Cita
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal Seleccionar Oficina / Puesto de Secretaría -->
+  <div class="modal-overlay" id="office-select-modal" onclick="if(event.target===this) closeOfficeModal()" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.85); backdrop-filter:blur(8px); align-items:center; justify-content:center; z-index:9999;">
+    <div class="modal-card" style="background:#fff; border-radius:24px; padding:32px; max-width:500px; width:90%; box-shadow:0 25px 50px rgba(0,0,0,0.35); position:relative;">
+      <button type="button" style="position:absolute; top:20px; right:20px; border:none; background:none; font-size:22px; cursor:pointer; color:#64748b;" onclick="closeOfficeModal()">✕</button>
+
+      <div style="text-align:center; margin-bottom:24px;">
+        <div style="width:64px; height:64px; background:#e0f2fe; color:#0284c7; border-radius:20px; display:inline-flex; align-items:center; justify-content:center; font-size:28px; margin-bottom:12px;">
+          <i class="fa-solid fa-building-user"></i>
+        </div>
+        <h3 style="font-size:20px; font-weight:800; color:#0f172a; margin:0; font-family:'Outfit',sans-serif;">Puesto de Secretaría / Oficina Activa</h3>
+        <p style="font-size:13px; color:#64748b; margin-top:4px;">Seleccione la oficina administrativa a la cual llamará los citados presenciales.</p>
+      </div>
+
+      <div class="form-group mb-4">
+        <label class="form-label text-xs" style="font-weight:700;" for="modal-sec-office">Oficina / Área Administrativa:</label>
+        <select id="modal-sec-office" class="form-input" style="padding:12px 14px; font-weight:700; border-radius:12px; font-size:15px; border-color:#0284c7;">
+          <option value="">-- Seleccionar Oficina --</option>
+        </select>
+      </div>
+
+      <div style="display:flex; gap:12px;">
+        <button type="button" class="btn btn-secondary" onclick="closeOfficeModal()" style="flex:1; padding:12px; border-radius:12px; font-weight:700; justify-content:center;">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="confirmSelectOffice()" style="flex:2; padding:12px; border-radius:12px; font-weight:800; justify-content:center;"><i class="fa-solid fa-check"></i> Confirmar Oficina</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Registrar Visitante Presencial (Sin Cita) -->
+  <div class="modal-overlay" id="walkin-modal" onclick="if(event.target===this) closeWalkInModal()" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.8); backdrop-filter:blur(6px); align-items:center; justify-content:center; z-index:9999;">
+    <div class="modal-card" style="background:#fff; border-radius:20px; padding:28px; max-width:500px; width:90%; box-shadow:0 20px 40px rgba(0,0,0,0.25);">
+      <div class="flex-between mb-3">
+        <h3 style="font-size:18px; font-weight:800; color:#0f172a; margin:0;"><i class="fa-solid fa-user-plus text-primary"></i> Registrar Visitante (Sin Cita)</h3>
+        <button type="button" style="border:none; background:none; font-size:20px; cursor:pointer;" onclick="closeWalkInModal()">✕</button>
+      </div>
+
+      <div class="form-group mb-3">
+        <label class="form-label text-xs" style="font-weight:700;" for="walkin-name">Nombre Completo del Visitante:</label>
+        <input type="text" id="walkin-name" class="form-input" placeholder="Ej: María López" required>
+      </div>
+
+      <div class="form-group mb-3">
+        <label class="form-label text-xs" style="font-weight:700;" for="walkin-service">Oficina / Área de Destino:</label>
+        <select id="walkin-service" class="form-input" required>
+          <option value="">-- Seleccionar Oficina --</option>
+        </select>
+      </div>
+
+      <div class="form-group mb-3">
+        <label class="form-label text-xs" style="font-weight:700;" for="walkin-pref">Atención Preferencial:</label>
+        <select id="walkin-pref" class="form-input">
+          <option value="false">Atención Normal</option>
+          <option value="true">⭐ Preferencial (Discapacidad / Adulto Mayor / Embarazo)</option>
+        </select>
+      </div>
+
+      <div class="flex-between mt-4">
+        <button type="button" class="btn btn-secondary" onclick="closeWalkInModal()">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="submitWalkIn()"><i class="fa-solid fa-ticket"></i> Generar Turno en Cola</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenedor Oculto para Impresión de Comprobante (Solo visible al imprimir) -->
+  <div id="printable-appointment" style="display:none;">
+    <div style="font-family:'Outfit',sans-serif; text-align:center; padding:20px; width:280px; margin:0 auto; color:#000;">
+      <div style="font-size:22px; font-weight:900; letter-spacing:1px; margin-bottom:2px;">MI TURNO</div>
+      <div style="font-size:12px; font-weight:700; text-transform:uppercase; color:#444; margin-bottom:10px;">Comprobante de Cita Programada</div>
+      <div style="border-top:2px dashed #000; margin:10px 0;"></div>
+
+      <div style="font-size:11px; text-transform:uppercase; font-weight:800; color:#555;">Código de Confirmación</div>
+      <div style="font-size:32px; font-weight:900; letter-spacing:3px; margin:6px 0; border:2px solid #000; padding:6px; border-radius:8px;" id="print-appt-code">------</div>
+
+      <div style="text-align:left; font-size:12px; margin-top:12px; line-height:1.6;">
+        <div><strong>Usuario:</strong> <span id="print-appt-name">---</span></div>
+        <div><strong>Área / Oficina:</strong> <span id="print-appt-service">---</span></div>
+        <div><strong>Fecha:</strong> <span id="print-appt-date">---</span></div>
+        <div><strong>Hora Programada:</strong> <span id="print-appt-time">---</span></div>
+      </div>
+
+      <div style="border-top:2px dashed #000; margin:14px 0 10px;"></div>
+      <div style="font-size:10px; text-align:center; line-height:1.4;">
+        Presente este comprobante o código al llegar a la recepción del centro. ¡Gracias!
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="app.js"></script>
+  <script>
+    let todayAppointments = [];
+    let allServicesList = [];
+    let activeOfficeName = '';
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      MT.renderSidebar('appointments');
+      MT.renderTopbar('Reserva de Citas', 'Panel de secretaría y agendamiento programado');
+
+      const todayStr = new Date().toISOString().slice(0, 10);
+      document.getElementById('sec-filter-date').value = todayStr;
+      document.getElementById('appt-date').min = todayStr;
+      document.getElementById('appt-date').value = todayStr;
+
+      await loadServices();
+      initOfficeState();
+      await loadTodayAppointments();
+
+      if (MT.socket) {
+        MT.socket.on('appointment:update', () => loadTodayAppointments());
+      }
+    });
+
+    function initOfficeState() {
+      const savedOffice = localStorage.getItem('miturno_saved_sec_office_name');
+      const titleEl = document.getElementById('active-sec-office-title');
+      const filterSelect = document.getElementById('sec-filter-service');
+
+      if (savedOffice) {
+        activeOfficeName = savedOffice;
+        if (titleEl) {
+          titleEl.innerHTML = `<i class="fa-solid fa-building text-primary"></i> ${savedOffice}`;
+        }
+
+        if (filterSelect && allDepartmentsList.length > 0) {
+          const matchingDept = allDepartmentsList.find(d => d.name.toLowerCase().trim() === savedOffice.toLowerCase().trim());
+          if (matchingDept) filterSelect.value = matchingDept.id;
+        }
+      } else {
+        if (titleEl) titleEl.innerHTML = `<span style="color:#f59e0b;"><i class="fa-solid fa-triangle-exclamation"></i> Ninguna Oficina Seleccionada</span>`;
+      }
+    }
+
+    function openOfficeModal() {
+      const select = document.getElementById('modal-sec-office');
+      if (select) {
+        const listToUse = allDepartmentsList.length > 0 ? allDepartmentsList : allServicesList;
+        select.innerHTML = '<option value="">-- Seleccionar Departamento u Oficina --</option>' +
+          listToUse.map(d => `<option value="${d.name}">${d.name} (${d.code || d.prefix || 'DIR'})</option>`).join('');
+        if (activeOfficeName) select.value = activeOfficeName;
+      }
+      document.getElementById('office-select-modal').style.display = 'flex';
+    }
+
+    function closeOfficeModal() {
+      document.getElementById('office-select-modal').style.display = 'none';
+    }
+
+    function confirmSelectOffice() {
+      const val = document.getElementById('modal-sec-office').value.trim();
+      if (!val) {
+        MT.toast('Por favor seleccione una oficina administrativa', 'error');
+        return;
+      }
+
+      activeOfficeName = val;
+      localStorage.setItem('miturno_saved_sec_office_name', val);
+      initOfficeState();
+
+      const filterSelect = document.getElementById('sec-filter-service');
+      if (filterSelect && allDepartmentsList.length > 0) {
+        const matchingDept = allDepartmentsList.find(d => d.name.toLowerCase().trim() === val.toLowerCase().trim());
+        if (matchingDept) filterSelect.value = matchingDept.id;
+      }
+
+      closeOfficeModal();
+      MT.toast(`Puesto configurado para: ${val}`, 'success');
+      loadTodayAppointments();
+    }
+
+    function endSecWorkshift() {
+      if (confirm('¿Desea finalizar la jornada de llamadas de recepción en esta oficina?')) {
+        activeOfficeName = '';
+        localStorage.removeItem('miturno_saved_sec_office_name');
+        initOfficeState();
+        MT.toast('Jornada de recepción finalizada. Puesto de oficina liberado.', 'info');
+        setTimeout(() => openOfficeModal(), 300);
+      }
+    }
+
+    function switchMainTab(tab) {
+      const secBtn = document.getElementById('tab-btn-secretary');
+      const bookBtn = document.getElementById('tab-btn-booking');
+      const secContent = document.getElementById('tab-content-secretary');
+      const bookContent = document.getElementById('tab-content-booking');
+
+      if (tab === 'secretary') {
+        secBtn.style.background = '#0284c7'; secBtn.style.color = '#fff';
+        bookBtn.style.background = 'transparent'; bookBtn.style.color = '#64748b';
+        secContent.style.display = 'block';
+        bookContent.style.display = 'none';
+        loadTodayAppointments();
+      } else {
+        bookBtn.style.background = '#0284c7'; bookBtn.style.color = '#fff';
+        secBtn.style.background = 'transparent'; secBtn.style.color = '#64748b';
+        bookContent.style.display = 'block';
+        secContent.style.display = 'none';
+      }
+    }
+
+    let allDepartmentsList = [];
+
+    async function loadServices() {
+      try {
+        allDepartmentsList = await MT.api('/departments?active=true').catch(() => []);
+        allServicesList = await MT.api('/services?active=true').catch(() => []);
+
+        const selectBooking = document.getElementById('appt-service');
+        const selectFilter = document.getElementById('sec-filter-service');
+        const selectWalkin = document.getElementById('walkin-service');
+
+        const deptOptions = allDepartmentsList.map(d => `<option value="${d.id}">${d.name} (${d.code})</option>`).join('');
+        const serviceOptions = allServicesList.map(s => `<option value="${s.id}">${s.name} (${s.prefix})</option>`).join('');
+
+        const appointmentOptions = deptOptions || serviceOptions;
+
+        if (selectBooking) selectBooking.innerHTML = '<option value="">-- Seleccione Departamento / Oficina --</option>' + appointmentOptions;
+        if (selectFilter) {
+          selectFilter.innerHTML = '<option value="">Todos los departamentos</option>' + appointmentOptions;
+          if (activeOfficeName) {
+            const matchingDept = allDepartmentsList.find(d => d.name.toLowerCase().trim() === activeOfficeName.toLowerCase().trim());
+            if (matchingDept) selectFilter.value = matchingDept.id;
+          }
+        }
+        if (selectWalkin) selectWalkin.innerHTML = '<option value="">-- Seleccionar Área de Servicio --</option>' + serviceOptions;
+      } catch (e) {}
+    }
+
+    async function callNextOfficeAppointment() {
+      if (!todayAppointments || todayAppointments.length === 0) {
+        MT.toast('No hay citas registradas en la agenda para hoy', 'info');
+        return;
+      }
+
+      // Buscar la siguiente cita pendiente (presente en espera o confirmada) para esta oficina
+      const nextAppt = todayAppointments.find(a =>
+        (a.status === 'checked_in' || a.status === 'confirmed') &&
+        (!activeOfficeName || (a.department?.name?.toLowerCase().trim() === activeOfficeName.toLowerCase().trim() || a.service?.name?.toLowerCase().trim() === activeOfficeName.toLowerCase().trim()))
+      );
+
+      if (!nextAppt) {
+        MT.toast(`No hay citados en espera pendientes para ${activeOfficeName || 'esta oficina'}`, 'info');
+        return;
+      }
+
+      await callAppointment(nextAppt.id);
+    }
+
+    async function loadTodayAppointments() {
+      const date = document.getElementById('sec-filter-date').value;
+      const filterSelectVal = document.getElementById('sec-filter-service').value;
+      const status = document.getElementById('sec-filter-status').value;
+
+      try {
+        let url = `/appointments?date=${date}`;
+        if (filterSelectVal) {
+          if (allDepartmentsList.length > 0) {
+            url += `&department_id=${filterSelectVal}`;
+          } else {
+            url += `&service_id=${filterSelectVal}`;
+          }
+        }
+        if (status) url += `&status=${status}`;
+
+        todayAppointments = await MT.api(url).catch(() => []);
+        filterAppointmentsClientSide();
+      } catch (e) {
+        console.error('Error cargando citas:', e);
+      }
+    }
+
+    function filterAppointmentsClientSide() {
+      const query = document.getElementById('sec-search-query')?.value.trim().toLowerCase() || '';
+      if (!query) {
+        renderSecretaryAppointments(todayAppointments);
+        return;
+      }
+
+      const filtered = todayAppointments.filter(a =>
+        a.client_name?.toLowerCase().includes(query) ||
+        a.confirmation_code?.toLowerCase().includes(query) ||
+        a.client_email?.toLowerCase().includes(query) ||
+        a.client_phone?.includes(query)
+      );
+
+      renderSecretaryAppointments(filtered);
+    }
+
+    function renderSecretaryAppointments(list) {
+      const container = document.getElementById('secretary-list-container');
+      if (!list || list.length === 0) {
+        container.innerHTML = '<div class="text-muted text-center py-4">No hay citas programadas para el filtro seleccionado.</div>';
+        return;
+      }
+
+      container.innerHTML = list.map(a => `
+        <div class="appt-row-card ${a.status === 'completed' ? 'completed' : a.status === 'checked_in' ? 'checked-in' : a.status === 'called' ? 'called' : a.status === 'converted' ? 'converted' : ''}">
+          <div style="display:flex; align-items:center; gap:16px;">
+            <div style="background:${a.status === 'completed' ? '#10b981' : '#0284c7'}; color:#fff; padding:10px 14px; border-radius:12px; text-align:center; font-family:'Outfit',sans-serif; flex-shrink:0;">
+              <small style="font-size:10px; display:block; text-transform:uppercase;">Hora Cita</small>
+              <strong style="font-size:18px; font-weight:800;">${a.scheduled_time}</strong>
+            </div>
+            <div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <strong style="font-size:17px; font-weight:800; color:#0f172a;">${a.client_name}</strong>
+                <span style="font-size:11px; font-weight:800; padding:2px 8px; border-radius:6px; ${a.status === 'completed' ? 'background:#dcfce7; color:#15803d;' : a.status === 'checked_in' ? 'background:#e0f2fe; color:#0284c7;' : a.status === 'called' ? 'background:#fef3c7; color:#b45309;' : a.status === 'converted' ? 'background:#e0e7ff; color:#3730a3;' : 'background:#f1f5f9; color:#64748b;'}">
+                  ${a.status === 'completed' ? '✅ Atendido' : a.status === 'checked_in' ? '📌 Presente en Espera' : a.status === 'called' ? '📢 Llamado por Secretaria' : a.status === 'converted' ? '🎫 Convertido a Turno' : '⏳ Confirmada'}
+                </span>
+              </div>
+              <div style="font-size:12px; color:#64748b; margin-top:3px;">
+                <i class="fa-solid fa-building text-primary"></i> ${a.department ? a.department.name : a.service ? a.service.name : 'Oficina'} • Código: <strong>${a.confirmation_code}</strong>
+                ${a.client_email ? ` • <i class="fa-solid fa-envelope"></i> ${a.client_email}` : ''}
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            ${a.status === 'confirmed' ? `
+              <button type="button" class="btn btn-xs" style="background:#0284c7; color:#fff;" onclick="checkInAppointment(${a.id})">
+                <i class="fa-solid fa-location-dot"></i> Marcar Presente
+              </button>
+            ` : ''}
+            <button type="button" class="btn btn-xs btn-primary" onclick="callAppointment(${a.id})">
+              <i class="fa-solid fa-bullhorn"></i> Llamar
+            </button>
+            ${a.status === 'called' || a.status === 'checked_in' ? `
+              <button type="button" class="btn btn-xs btn-success" onclick="finishAppointment(${a.id})" title="Marcar cita como completada/atendida">
+                <i class="fa-solid fa-circle-check"></i> Atendido
+              </button>
+              <button type="button" class="btn btn-xs" style="background:#4f46e5; color:#fff;" onclick="finishAndCallNextAppt(${a.id})" title="Finalizar esta cita y llamar automáticamente la siguiente">
+                <i class="fa-solid fa-forward-step"></i> Atendido y Llamar Próximo
+              </button>
+            ` : ''}
+            ${a.status !== 'converted' ? `
+              <button type="button" class="btn btn-xs btn-outline-primary" onclick="convertAppointmentToTicket(${a.id})" title="Generar turno en la cola de atención">
+                <i class="fa-solid fa-ticket"></i> Asignar Turno
+              </button>
+            ` : ''}
+            <button type="button" class="btn btn-xs btn-secondary" onclick="resendApptEmail(${a.id}, '${a.client_email || ''}')" title="Reenviar correo electrónico de confirmación">
+              <i class="fa-solid fa-paper-plane"></i> Reenviar Correo
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function checkInAppointment(id) {
+      try {
+        await MT.api(`/appointments/${id}/checkin`, { method: 'POST' });
+        MT.toast('Usuario marcado como Presente en Recepción', 'success');
+        loadTodayAppointments();
+      } catch (e) {
+        MT.toast(e.message || 'Error al marcar presente', 'error');
+      }
+    }
+
+    async function finishAppointment(id) {
+      try {
+        await MT.api(`/appointments/${id}/finish`, { method: 'POST' });
+        MT.toast('Cita marcada como Atendida / Completada', 'success');
+        loadTodayAppointments();
+      } catch (e) {
+        MT.toast(e.message || 'Error al marcar atendido', 'error');
+      }
+    }
+
+    async function finishAndCallNextAppt(id) {
+      try {
+        await MT.api(`/appointments/${id}/finish`, { method: 'POST' });
+
+        // Buscar la siguiente cita pendiente en la cola (presente en espera o confirmada)
+        const nextAppt = todayAppointments.find(a => a.id !== id && (a.status === 'checked_in' || a.status === 'confirmed'));
+        if (nextAppt) {
+          await callAppointment(nextAppt.id);
+          MT.toast(`Cita actual finalizada y llamada iniciada para ${nextAppt.client_name}`, 'success');
+        } else {
+          MT.toast('Cita marcada como Atendida. No hay más citas pendientes en la cola.', 'info');
+          loadTodayAppointments();
+        }
+      } catch (e) {
+        MT.toast(e.message || 'Error al procesar la cita', 'error');
+      }
+    }
+
+    async function convertAppointmentToTicket(id) {
+      try {
+        const res = await MT.api(`/appointments/${id}/convert`, { method: 'POST' });
+        if (res && res.ticket) {
+          MT.toast(`Cita asignada a turno ${res.ticket.number} exitosamente`, 'success');
+          loadTodayAppointments();
+        }
+      } catch (e) {
+        MT.toast(e.message || 'Error al asignar turno a la cita', 'error');
+      }
+    }
+
+    async function callAppointment(id) {
+      const appt = todayAppointments.find(a => a.id === id);
+      if (!appt) return;
+
+      const targetObj = appt.department || appt.service;
+      const deptName = targetObj?.name || activeOfficeName || 'Oficina Administrativa';
+      const doorLoc = targetObj?.location || '';
+
+      try {
+        await MT.api(`/appointments/${id}/call`, {
+          method: 'POST',
+          body: JSON.stringify({ office_name: deptName, door_location: doorLoc })
+        });
+        MT.toast(`Cita de ${appt.client_name} llamada formalmente`, 'success');
+        loadTodayAppointments();
+      } catch (e) {
+        MT.toast(e.message || 'Error al llamar cita', 'error');
+      }
+    }
+
+    function openWalkInModal() {
+      document.getElementById('walkin-name').value = '';
+      document.getElementById('walkin-modal').style.display = 'flex';
+    }
+
+    function closeWalkInModal() {
+      document.getElementById('walkin-modal').style.display = 'none';
+    }
+
+    async function submitWalkIn() {
+      const name = document.getElementById('walkin-name').value.trim();
+      const serviceId = document.getElementById('walkin-service').value;
+      const isPref = document.getElementById('walkin-pref').value === 'true';
+
+      if (!name || !serviceId) {
+        MT.toast('Ingrese el nombre y seleccione la oficina de destino', 'error');
+        return;
+      }
+
+      try {
+        const ticket = await MT.api('/tickets/create', {
+          method: 'POST',
+          body: JSON.stringify({
+            service_id: parseInt(serviceId, 10),
+            client_name: name,
+            is_preferential: isPref,
+            preferential_reason: isPref ? 'Atención Prioritaria' : null
+          })
+        });
+
+        MT.toast(`Visitante ${name} registrado con boleto ${ticket.number || ticket.ticket?.number || 'en cola'}`, 'success');
+        closeWalkInModal();
+      } catch (e) {
+        MT.toast(e.message || 'Error al registrar visitante', 'error');
+      }
+    }
+
+    let lastCreatedAppointment = null;
+
+    async function submitAppointment(ev) {
+      ev.preventDefault();
+      const serviceId = document.getElementById('appt-service').value;
+      const date = document.getElementById('appt-date').value;
+      const time = document.getElementById('appt-time').value;
+      const name = document.getElementById('appt-name').value.trim();
+      const phone = document.getElementById('appt-phone').value.trim();
+      const email = document.getElementById('appt-email').value.trim();
+      const notes = document.getElementById('appt-notes').value.trim();
+
+      if (!serviceId || !date || !time || !name) {
+        MT.toast('Por favor complete los campos obligatorios', 'error');
+        return;
+      }
+
+      const isDept = allDepartmentsList.length > 0;
+      const payload = {
+        scheduled_date: date,
+        scheduled_time: time,
+        client_name: name,
+        client_phone: phone,
+        client_email: email,
+        notes
+      };
+      if (isDept) {
+        payload.department_id = parseInt(serviceId, 10);
+      } else {
+        payload.service_id = parseInt(serviceId, 10);
+      }
+
+      try {
+        const res = await MT.api('/appointments', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+
+        if (res && res.confirmation_code) {
+          lastCreatedAppointment = res;
+          document.getElementById('appointment-form').style.display = 'none';
+          document.getElementById('confirmation-result').style.display = 'block';
+          document.getElementById('result-code').textContent = res.confirmation_code;
+          const dest = res.department ? res.department.name : res.service ? res.service.name : 'Oficina';
+          document.getElementById('result-details').textContent = `${dest} — ${res.scheduled_date} a las ${res.scheduled_time}`;
+          MT.toast('¡Reserva confirmada y correo enviado!', 'success');
+        }
+      } catch (err) {
+        MT.toast(err.message || 'Error al agendar cita', 'error');
+      }
+    }
+
+    function printAppointmentReceipt() {
+      if (!lastCreatedAppointment) {
+        MT.toast('No hay un comprobante de cita para imprimir', 'warning');
+        return;
+      }
+
+      document.getElementById('print-appt-code').textContent = lastCreatedAppointment.confirmation_code;
+      document.getElementById('print-appt-name').textContent = lastCreatedAppointment.client_name;
+      document.getElementById('print-appt-service').textContent = lastCreatedAppointment.service?.name || 'Oficina Administrativa';
+      document.getElementById('print-appt-date').textContent = lastCreatedAppointment.scheduled_date;
+      document.getElementById('print-appt-time').textContent = `${lastCreatedAppointment.scheduled_time} hrs`;
+
+      setTimeout(() => window.print(), 300);
+    }
+
+    function resetForm() {
+      lastCreatedAppointment = null;
+      document.getElementById('appointment-form').reset();
+      document.getElementById('appointment-form').style.display = 'block';
+      document.getElementById('confirmation-result').style.display = 'none';
+    }
+
+    async function resendApptEmail(id, currentEmail) {
+      const targetEmail = prompt('Confirmar o ingresar correo electrónico para el reenvío:', currentEmail || '');
+      if (targetEmail === null) return;
+
+      if (!targetEmail || !targetEmail.includes('@')) {
+        MT.toast('Por favor ingrese un correo electrónico válido', 'error');
+        return;
+      }
+
+      try {
+        const res = await MT.api(`/appointments/${id}/resend-email`, {
+          method: 'POST',
+          body: JSON.stringify({ email: targetEmail })
+        });
+        MT.toast(res.message || `Correo reenviado exitosamente a ${targetEmail}`, 'success');
+        loadTodayAppointments();
+      } catch (e) {
+        MT.toast(e.message || 'Error al reenviar correo', 'error');
+      }
+    }
+
+    async function resendLastAppointmentEmail() {
+      if (!lastCreatedAppointment) {
+        MT.toast('No hay una reserva reciente para reenviar correo', 'warning');
+        return;
+      }
+      await resendApptEmail(lastCreatedAppointment.id, lastCreatedAppointment.client_email);
+    }
+  </script>
+</body>
+</html>

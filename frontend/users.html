@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi turno — Administración de Usuarios</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="styles.css?v=2.0">
+  <style>
+    .gender-icon.female { color: #ec4899; font-size: 20px; }
+    .gender-icon.male { color: #0284c7; font-size: 20px; }
+    .badge-yes { color: #10b981; font-weight: 700; }
+    .badge-no { color: #f43f5e; font-weight: 700; }
+    
+    /* Layout horizontal de campos en filas de 3 columnas */
+    .user-form-row-3 {
+      display: grid !important;
+      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+      gap: 20px !important;
+      margin-bottom: 18px !important;
+      width: 100% !important;
+    }
+    .user-form-row-checks {
+      display: grid !important;
+      grid-template-columns: 1fr 2fr !important;
+      gap: 20px !important;
+      align-items: center !important;
+      margin-bottom: 22px !important;
+      width: 100% !important;
+    }
+    @media (max-width: 768px) {
+      .user-form-row-3 {
+        grid-template-columns: 1fr !important;
+      }
+      .user-form-row-checks {
+        grid-template-columns: 1fr !important;
+      }
+    }
+
+    .form-group {
+      margin-bottom: 0 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      width: 100% !important;
+    }
+    .form-group .form-label {
+      margin-bottom: 6px !important;
+      font-size: 13px !important;
+      font-weight: 600 !important;
+      color: #334155 !important;
+    }
+    .form-input {
+      width: 100% !important;
+      box-sizing: border-box !important;
+      height: 42px !important;
+      padding: 8px 14px !important;
+      font-size: 14px !important;
+      border: 1.5px solid #cbd5e1 !important;
+      border-radius: 8px !important;
+      background: #ffffff !important;
+      color: #1e293b !important;
+      outline: none !important;
+      transition: all 0.2s !important;
+      font-family: inherit !important;
+    }
+    .form-input:focus {
+      border-color: #0ea5e9 !important;
+      box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15) !important;
+      background: #ffffff !important;
+    }
+    .form-input::placeholder {
+      color: #94a3b8 !important;
+    }
+    
+    .action-dropdown {
+      position: relative;
+      display: inline-block;
+    }
+    .action-menu {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 100%;
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      z-index: 100;
+      min-width: 160px;
+      padding: 6px 0;
+    }
+    .action-menu.show { display: block; }
+    .action-menu-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 16px;
+      font-size: 13px;
+      color: #334155;
+      text-decoration: none;
+      cursor: pointer;
+      background: none;
+      border: none;
+      width: 100%;
+      text-align: left;
+    }
+    .action-menu-item:hover {
+      background: #f1f5f9;
+      color: #0284c7;
+    }
+    .action-menu-item.danger:hover {
+      background: #fef2f2;
+      color: #ef4444;
+    }
+    .detail-row {
+      background: #f8fafc;
+      font-size: 13px;
+      color: #475569;
+    }
+    .detail-container {
+      padding: 16px 24px;
+      border-left: 3px solid #0ea5e9;
+      margin: 8px 0;
+    }
+  </style>
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <div id="sidebar-container"></div>
+
+    <main class="app-main">
+      <div id="topbar-container"></div>
+
+      <!-- Dominican Hospital Header Banner (Matching Screenshot 1 & 2) -->
+      <div class="hospital-banner">
+        <h2>
+          <span>Administración de Usuarios</span>
+          <span style="opacity:0.4;">|</span>
+          <span id="banner-sub-text" style="font-weight:400; font-size:15px; color:#cbd5e1;">Listado de Usuarios</span>
+        </h2>
+        <div class="banner-sub">
+          <a href="dashboard.html" class="breadcrumb-link">Tablero de Control</a> - <span id="breadcrumb-current">Listado de Usuarios</span>
+        </div>
+      </div>
+
+      <div class="content-body" style="padding-top: 20px;">
+        <!-- ================= VISTA LISTADO DE USUARIOS (Screenshot 1) ================= -->
+        <div id="users-list-view">
+          <div class="users-container-card">
+            <!-- Top Controls: Title & Action Buttons -->
+            <div class="users-top-bar">
+              <div class="users-top-title" id="users-active-tab-title">
+                Usuarios <span id="users-mode-label">ACTIVOS</span>
+              </div>
+
+              <div class="users-btn-group">
+                <button class="btn-ht-new" onclick="showNewUserView()">
+                  <i class="fa-solid fa-plus"></i> Nuevo Usuario
+                </button>
+                <button class="btn-ht-inactive" id="btn-tab-inactive" onclick="setUsersTab('inactive')">
+                  <i class="fa-solid fa-user-lock"></i> Usuarios Desactivados
+                </button>
+                <button class="btn-ht-deleted" id="btn-tab-deleted" onclick="setUsersTab('deleted')">
+                  <i class="fa-solid fa-trash"></i> Usuarios Eliminados
+                </button>
+                <div class="action-dropdown">
+                  <button class="btn-ht-export" onclick="toggleExportMenu()">
+                    <i class="fa-solid fa-file-export"></i> Exportar <i class="fa-solid fa-chevron-down" style="font-size:10px;"></i>
+                  </button>
+                  <div class="action-menu" id="export-menu">
+                    <button class="action-menu-item" onclick="exportUsers('csv')"><i class="fa-solid fa-file-csv"></i> Exportar a CSV</button>
+                    <button class="action-menu-item" onclick="exportUsers('json')"><i class="fa-solid fa-file-code"></i> Exportar a JSON</button>
+                    <button class="action-menu-item" onclick="window.print()"><i class="fa-solid fa-print"></i> Imprimir Lista</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Table Filter Bar: Entries per page & Search -->
+            <div class="table-filter-bar">
+              <div class="flex-align gap-2">
+                <span>Mostrar</span>
+                <select id="entries-per-page" onchange="changePageSize(this.value)">
+                  <option value="10">10</option>
+                  <option value="25" selected>25</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                </select>
+                <span>entradas</span>
+              </div>
+
+              <div class="search-input-wrap">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="users-search-input" placeholder="Buscar ..." onkeyup="filterUsersSearch()">
+              </div>
+            </div>
+
+            <!-- Data Table (Screenshot 1) -->
+            <div class="table-responsive" style="overflow-x:auto;">
+              <table class="data-table" style="width:100%;" id="users-main-table">
+                <thead>
+                  <tr>
+                    <th style="cursor:pointer;" onclick="sortUsers('name')">Nombres <i class="fa-solid fa-sort" style="font-size:11px; margin-left:4px;"></i></th>
+                    <th>Apellidos</th>
+                    <th>Cédula</th>
+                    <th style="text-align:center;">Género</th>
+                    <th>Correo</th>
+                    <th style="text-align:center;">Verificado</th>
+                    <th style="text-align:center;">2FA</th>
+                    <th style="text-align:center;">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="users-table-body">
+                  <tr><td colspan="8" class="text-center py-4 text-muted"><i class="fa-solid fa-spinner fa-spin"></i> Cargando personal médico y usuarios...</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="flex-between mt-3 text-muted text-sm" id="table-pagination-info">
+              <span id="showing-entries-label">Mostrando 0 de 0 entradas</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= VISTA FORMULARIO NUEVO / EDITAR USUARIO (Screenshot 2) ================= -->
+        <div id="users-form-view" style="display:none;">
+          <div class="users-container-card">
+            <!-- Header with Back Button (Screenshot 2) -->
+            <div class="user-form-header">
+              <h2 id="form-heading">Nuevo Usuario</h2>
+              <button class="btn-back-link" onclick="hideNewUserView()">
+                <i class="fa-solid fa-arrow-left"></i> Regresar
+              </button>
+            </div>
+
+            <form id="user-create-form" onsubmit="handleSaveUser(event)">
+              <input type="hidden" id="form-user-id">
+
+              <!-- Fila 1: Nombres, Apellidos, Cédula (Orientados horizontalmente uno al lado del otro) -->
+              <div class="user-form-row-3">
+                <div class="form-group">
+                  <label class="form-label" for="user-first-name">Nombres *</label>
+                  <input type="text" id="user-first-name" class="form-input" placeholder="Ej. Juan" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="user-last-name">Apellidos *</label>
+                  <input type="text" id="user-last-name" class="form-input" placeholder="Ej. Pérez" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="user-cedula">Cédula</label>
+                  <input type="text" id="user-cedula" class="form-input" placeholder="000-0000000-0">
+                </div>
+              </div>
+
+              <!-- Fila 2: Correo, Contraseña, Confirmación de la Contraseña (Orientados horizontalmente uno al lado del otro) -->
+              <div class="user-form-row-3">
+                <div class="form-group">
+                  <label class="form-label" for="user-email">Dirección de Correo *</label>
+                  <input type="email" id="user-email" class="form-input" placeholder="usuario@empresa.com" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="user-password">Contraseña</label>
+                  <input type="password" id="user-password" class="form-input" placeholder="••••••••">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="user-password-confirm">Confirmación de la Contraseña</label>
+                  <input type="password" id="user-password-confirm" class="form-input" placeholder="••••••••">
+                </div>
+              </div>
+
+              <!-- Fila 3: Género * y Checks (Orientados horizontalmente uno al lado del otro) -->
+              <div class="user-form-row-checks">
+                <div class="form-group">
+                  <label class="form-label">Género *</label>
+                  <div style="display:flex; align-items:center; gap:20px; height:42px;">
+                    <label style="font-size:13px; font-weight:500; display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
+                      <input type="radio" name="gender" value="male" style="accent-color:#0ea5e9;"> Masculino
+                    </label>
+                    <label style="font-size:13px; font-weight:500; display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
+                      <input type="radio" name="gender" value="female" checked style="accent-color:#0ea5e9;"> Femenino
+                    </label>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" style="opacity:0; user-select:none;">Opciones</label>
+                  <div style="display:flex; align-items:center; gap:24px; height:42px; flex-wrap:wrap;">
+                    <label style="font-size:13px; font-weight:600; display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
+                      <input type="checkbox" id="user-active" checked style="accent-color:#0ea5e9; width:16px; height:16px;"> Activo
+                    </label>
+                    <label style="font-size:13px; font-weight:500; color:#475569; display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
+                      <input type="checkbox" id="user-verified" style="accent-color:#0ea5e9; width:16px; height:16px;"> Correo verificado
+                    </label>
+                    <label style="font-size:13px; font-weight:500; color:#475569; display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
+                      <input type="checkbox" id="user-send-confirm" style="accent-color:#0ea5e9; width:16px; height:16px;"> Enviar correo de confirmación
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Full width cyan divider line -->
+              <div class="cyan-divider"></div>
+
+              <!-- DYNAMIC ROLE SELECTION FROM DATABASE -->
+              <div class="mb-4" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:20px;">
+                <div class="form-group mb-3">
+                  <label class="form-label" for="user-role-id" style="font-weight:700; color:#0f172a; font-size:14px;">
+                    <i class="fa-solid fa-user-shield text-primary"></i> Rol y Perfil de Acceso Asignado *
+                  </label>
+                  <select id="user-role-id" class="form-input" required onchange="onUserRoleSelectChange()" style="padding:10px 14px; font-weight:700; border-radius:10px; font-size:15px; border-color:#0284c7;">
+                    <option value="">Cargando roles del sistema...</option>
+                  </select>
+                </div>
+
+                <!-- Preview Box of Selected Role's Permissions -->
+                <div id="role-preview-card" style="background:#ffffff; border:1px solid #cbd5e1; border-radius:12px; padding:16px; margin-top:12px;">
+                  <div style="font-size:12px; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:6px;">
+                    Permisos Asignados al Rol Seleccionado:
+                  </div>
+                  <div id="role-preview-perms" style="display:flex; flex-wrap:wrap; gap:6px;">
+                    <span class="text-xs text-muted">Seleccione un rol para ver sus privilegios.</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Action Bar at bottom -->
+              <div class="flex-between pt-4" style="border-top: 1px solid #e2e8f0;">
+                <button type="button" class="btn btn-secondary" onclick="hideNewUserView()">
+                  <i class="fa-solid fa-xmark"></i> Cancelar
+                </button>
+                <button type="submit" class="btn btn-primary" style="background:#0ea5e9; border-color:#0ea5e9; padding:10px 24px; font-weight:700;">
+                  <i class="fa-solid fa-check"></i> <span id="save-user-btn-label">Guardar Usuario</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="app.js"></script>
+  <script>
+    let rawUsersList = [];
+    let currentTab = 'active'; // 'active', 'inactive', 'deleted'
+    let pageSize = 25;
+    let sortField = 'name';
+    let sortAsc = true;
+    let expandedRowIds = new Set();
+
+    document.addEventListener('DOMContentLoaded', () => {
+      MT.renderSidebar('users');
+      MT.renderTopbar('Administración de Usuarios', 'Listado de personal y accesos');
+      loadUsersData();
+
+      // Close export dropdown when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.action-dropdown')) {
+          document.getElementById('export-menu')?.classList.remove('show');
+          document.querySelectorAll('.action-menu').forEach(m => m.classList.remove('show'));
+        }
+      });
+    });
+
+    let systemRolesList = [];
+
+    async function loadUsersData() {
+      try {
+        systemRolesList = await MT.api('/roles').catch(() => []);
+        populateRoleDropdown();
+
+        let endpoint = '/users';
+        if (currentTab === 'deleted') {
+          endpoint = '/users?deleted=true';
+        }
+        rawUsersList = await MT.api(endpoint) || [];
+        renderTable();
+      } catch (e) {
+        console.error('Error cargando usuarios:', e);
+      }
+    }
+
+    function populateRoleDropdown() {
+      const select = document.getElementById('user-role-id');
+      if (!select) return;
+      if (!systemRolesList || systemRolesList.length === 0) {
+        select.innerHTML = '<option value="1">Administrador</option><option value="2">Agente / Operador</option>';
+        return;
+      }
+
+      select.innerHTML = '<option value="">-- Seleccionar Rol Asignado --</option>' +
+        systemRolesList.map(r => `<option value="${r.id}">${r.name.toUpperCase()} — ${r.description || 'Sin descripción'}</option>`).join('');
+    }
+
+    function onUserRoleSelectChange() {
+      const select = document.getElementById('user-role-id');
+      const roleId = Number(select?.value);
+      const previewEl = document.getElementById('role-preview-perms');
+
+      if (!roleId || !previewEl) {
+        if (previewEl) previewEl.innerHTML = '<span class="text-xs text-muted">Seleccione un rol para ver sus privilegios.</span>';
+        return;
+      }
+
+      const roleObj = systemRolesList.find(r => Number(r.id) === roleId);
+      if (!roleObj) return;
+
+      const perms = Array.isArray(roleObj.permissions) ? roleObj.permissions : [];
+      if (perms.length === 0 || perms.includes('*')) {
+        previewEl.innerHTML = '<span class="perm-chip" style="background:#0284c7; color:#fff; font-weight:800;">Acceso Total (*)</span>';
+      } else {
+        previewEl.innerHTML = perms.map(p => `<span class="perm-chip" style="background:#e0f2fe; color:#0284c7; font-weight:700; padding:4px 8px; border-radius:6px; font-size:11px;">${p}</span>`).join('');
+      }
+    }
+
+    function setUsersTab(tab) {
+      currentTab = tab;
+      
+      const tabTitle = document.getElementById('users-active-tab-title');
+      const label = document.getElementById('users-mode-label');
+      const btnInactive = document.getElementById('btn-tab-inactive');
+      const btnDeleted = document.getElementById('btn-tab-deleted');
+
+      btnInactive.classList.remove('active');
+      btnDeleted.classList.remove('active');
+
+      if (tab === 'inactive') {
+        label.textContent = 'DESACTIVADOS';
+        label.style.color = '#8b5cf6';
+        btnInactive.classList.add('active');
+      } else if (tab === 'deleted') {
+        label.textContent = 'ELIMINADOS';
+        label.style.color = '#ef4444';
+        btnDeleted.classList.add('active');
+      } else {
+        label.textContent = 'ACTIVOS';
+        label.style.color = '#94a3b8';
+      }
+
+      loadUsersData();
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('users-table-body');
+      const searchVal = (document.getElementById('users-search-input')?.value || '').toLowerCase().trim();
+
+      let list = rawUsersList.filter(u => {
+        if (currentTab === 'deleted') return u.is_deleted === true;
+        if (currentTab === 'inactive') return !u.active && !u.is_deleted;
+        return u.active && !u.is_deleted;
+      });
+
+      if (searchVal) {
+        list = list.filter(u => {
+          const fn = (u.first_name || '').toLowerCase();
+          const ln = (u.last_name || '').toLowerCase();
+          const name = (u.name || '').toLowerCase();
+          const cedula = (u.cedula || '').toLowerCase();
+          const email = (u.email || '').toLowerCase();
+          return fn.includes(searchVal) || ln.includes(searchVal) || name.includes(searchVal) || cedula.includes(searchVal) || email.includes(searchVal);
+        });
+      }
+
+      // Sort
+      list.sort((a, b) => {
+        const valA = (a[sortField] || a.name || '').toLowerCase();
+        const valB = (b[sortField] || b.name || '').toLowerCase();
+        return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+      });
+
+      // Pagination
+      const total = list.length;
+      const paginated = list.slice(0, pageSize);
+      document.getElementById('showing-entries-label').textContent = `Mostrando ${Math.min(total, paginated.length)} de ${total} entradas`;
+
+      if (paginated.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-muted">No se encontraron usuarios en esta vista.</td></tr>`;
+        return;
+      }
+
+      let html = '';
+      paginated.forEach(u => {
+        const parts = (u.name || '').split(' ');
+        const firstName = u.first_name || parts[0] || 'Usuario';
+        const lastName = u.last_name || parts.slice(1).join(' ') || '';
+        const isFemale = u.gender === 'female';
+        const isExpanded = expandedRowIds.has(u.id);
+
+        html += `
+          <tr>
+            <td>
+              <div class="flex-align">
+                <button class="table-plus-btn" onclick="toggleExpandRow(${u.id})" title="Detalles">
+                  <i class="fa-solid fa-${isExpanded ? 'minus' : 'plus'}"></i>
+                </button>
+                <strong>${firstName}</strong>
+              </div>
+            </td>
+            <td>${lastName}</td>
+            <td>${u.cedula || '000-0000000-0'}</td>
+            <td style="text-align:center;">
+              <i class="fa-solid fa-person-${isFemale ? 'dress gender-icon female' : 'standing gender-icon male'}" 
+                 title="${isFemale ? 'Femenino' : 'Masculino'}"></i>
+            </td>
+            <td>${u.email}</td>
+            <td style="text-align:center;">
+              <span class="${u.is_verified ? 'badge-yes' : 'badge-no'}">${u.is_verified ? 'Si' : 'No'}</span>
+            </td>
+            <td style="text-align:center;">
+              <span class="${u.two_factor ? 'badge-yes' : 'badge-no'}">${u.two_factor ? 'Si' : 'No'}</span>
+            </td>
+            <td style="text-align:center;">
+              <div class="action-dropdown">
+                <button class="btn-action-dots" onclick="toggleRowMenu(${u.id}, event)" title="Acciones">
+                  <i class="fa-solid fa-ellipsis-vertical"></i>
+                </button>
+                <div class="action-menu" id="menu-${u.id}">
+                  <button class="action-menu-item" onclick="openEditUser(${u.id})">
+                    <i class="fa-solid fa-pen-to-square"></i> Editar
+                  </button>
+                  ${!u.is_deleted ? `
+                    <button class="action-menu-item" onclick="toggleActiveStatus(${u.id})">
+                      <i class="fa-solid fa-${u.active ? 'user-slash' : 'user-check'}"></i> ${u.active ? 'Desactivar' : 'Activar'}
+                    </button>
+                    <button class="action-menu-item danger" onclick="softDeleteUser(${u.id})">
+                      <i class="fa-solid fa-trash"></i> Enviar a Eliminados
+                    </button>
+                  ` : `
+                    <button class="action-menu-item" onclick="restoreUser(${u.id})">
+                      <i class="fa-solid fa-trash-can-arrow-up"></i> Restaurar
+                    </button>
+                    <button class="action-menu-item danger" onclick="permanentDeleteUser(${u.id})">
+                      <i class="fa-solid fa-ban"></i> Eliminar Definitivo
+                    </button>
+                  `}
+                </div>
+              </div>
+            </td>
+          </tr>
+        `;
+
+        if (isExpanded) {
+          html += `
+            <tr class="detail-row">
+              <td colspan="8">
+                <div class="detail-container">
+                  <div class="grid-3 gap-2">
+                    <div><strong>Rol asignado:</strong> ${u.role?.name || 'Auxiliar'}</div>
+                    <div><strong>ID de Usuario:</strong> #${u.id}</div>
+                    <div><strong>Estado:</strong> ${u.active ? 'Activo' : 'Desactivado'}</div>
+                  </div>
+                  <div class="mt-2 text-sm text-muted">
+                    <strong>Permisos asignados:</strong> 
+                    ${Array.isArray(u.permissions) && u.permissions.length > 0 ? u.permissions.join(', ') : 'Permisos estándar del rol'}
+                  </div>
+                </div>
+              </td>
+            </tr>
+          `;
+        }
+      });
+
+      tbody.innerHTML = html;
+    }
+
+    function toggleExpandRow(id) {
+      if (expandedRowIds.has(id)) expandedRowIds.delete(id);
+      else expandedRowIds.add(id);
+      renderTable();
+    }
+
+    function toggleRowMenu(id, ev) {
+      ev.stopPropagation();
+      document.querySelectorAll('.action-menu').forEach(m => {
+        if (m.id !== `menu-${id}`) m.classList.remove('show');
+      });
+      document.getElementById(`menu-${id}`)?.classList.toggle('show');
+    }
+
+    function toggleExportMenu() {
+      document.getElementById('export-menu')?.classList.toggle('show');
+    }
+
+    function changePageSize(size) {
+      pageSize = parseInt(size, 10);
+      renderTable();
+    }
+
+    function sortUsers(field) {
+      if (sortField === field) sortAsc = !sortAsc;
+      else { sortField = field; sortAsc = true; }
+      renderTable();
+    }
+
+    function filterUsersSearch() {
+      renderTable();
+    }
+
+    // Export options
+    function exportUsers(type) {
+      const activeList = rawUsersList.filter(u => currentTab === 'deleted' ? u.is_deleted : (currentTab === 'inactive' ? !u.active : u.active));
+      if (type === 'json') {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(activeList, null, 2));
+        const a = document.createElement('a');
+        a.href = dataStr;
+        a.download = `usuarios_${currentTab}.json`;
+        a.click();
+      } else if (type === 'csv') {
+        let csv = "Nombres,Apellidos,Cedula,Genero,Correo,Verificado,2FA,Rol\n";
+        activeList.forEach(u => {
+          csv += `"${u.first_name || ''}","${u.last_name || ''}","${u.cedula || ''}","${u.gender || ''}","${u.email}","${u.is_verified ? 'Si' : 'No'}","${u.two_factor ? 'Si' : 'No'}","${u.role?.name || ''}"\n`;
+        });
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `usuarios_${currentTab}.csv`;
+        a.click();
+      }
+      document.getElementById('export-menu')?.classList.remove('show');
+    }
+
+    // View Navigation
+    function showNewUserView() {
+      document.getElementById('user-create-form').reset();
+      document.getElementById('form-user-id').value = '';
+      document.getElementById('form-heading').textContent = 'Nuevo Usuario';
+      document.getElementById('save-user-btn-label').textContent = 'Guardar Usuario';
+      document.getElementById('banner-sub-text').textContent = 'Nuevo Usuario';
+      document.getElementById('breadcrumb-current').textContent = 'Nuevo Usuario';
+      
+      // Default selections
+      document.getElementById('user-active').checked = true;
+      document.getElementById('user-verified').checked = false;
+      document.getElementById('user-send-confirm').checked = false;
+
+      populateRoleDropdown();
+      const roleSelect = document.getElementById('user-role-id');
+      if (roleSelect && roleSelect.options.length > 1) {
+        roleSelect.selectedIndex = 1;
+        onUserRoleSelectChange();
+      }
+
+      document.getElementById('users-list-view').style.display = 'none';
+      document.getElementById('users-form-view').style.display = 'block';
+    }
+
+    function hideNewUserView() {
+      document.getElementById('users-form-view').style.display = 'none';
+      document.getElementById('users-list-view').style.display = 'block';
+      document.getElementById('banner-sub-text').textContent = 'Listado de Usuarios';
+      document.getElementById('breadcrumb-current').textContent = 'Listado de Usuarios';
+    }
+
+    // Open Edit Mode
+    function openEditUser(id) {
+      const u = rawUsersList.find(x => x.id === id);
+      if (!u) return;
+
+      const parts = (u.name || '').split(' ');
+      document.getElementById('form-user-id').value = u.id;
+      document.getElementById('user-first-name').value = u.first_name || parts[0] || '';
+      document.getElementById('user-last-name').value = u.last_name || parts.slice(1).join(' ') || '';
+      document.getElementById('user-cedula').value = u.cedula || '';
+      document.getElementById('user-email').value = u.email;
+      document.getElementById('user-password').value = '';
+      document.getElementById('user-password-confirm').value = '';
+      document.getElementById('user-active').checked = u.active;
+      document.getElementById('user-verified').checked = u.is_verified === true;
+      document.getElementById('user-send-confirm').checked = false;
+
+      const genderRadios = document.getElementsByName('gender');
+      for (const r of genderRadios) {
+        r.checked = r.value === (u.gender || 'female');
+      }
+
+      populateRoleDropdown();
+      const roleSelect = document.getElementById('user-role-id');
+      if (roleSelect) {
+        roleSelect.value = u.role_id || (u.role?.id) || 1;
+        onUserRoleSelectChange();
+      }
+
+      document.getElementById('form-heading').textContent = 'Editar Usuario';
+      document.getElementById('save-user-btn-label').textContent = 'Actualizar Usuario';
+      document.getElementById('banner-sub-text').textContent = 'Editar Usuario';
+      document.getElementById('breadcrumb-current').textContent = 'Editar Usuario';
+
+      document.getElementById('users-list-view').style.display = 'none';
+      document.getElementById('users-form-view').style.display = 'block';
+    }
+
+    // Save Form
+    async function handleSaveUser(e) {
+      e.preventDefault();
+      const id = document.getElementById('form-user-id').value;
+      const firstName = document.getElementById('user-first-name').value.trim();
+      const lastName = document.getElementById('user-last-name').value.trim();
+      const email = document.getElementById('user-email').value.trim();
+      const pass = document.getElementById('user-password').value;
+      const passConfirm = document.getElementById('user-password-confirm').value;
+
+      if (!id && !pass) {
+        MT.toast('La contraseña es requerida para un nuevo usuario', 'error');
+        return;
+      }
+
+      if (pass && pass !== passConfirm) {
+        MT.toast('Las contraseñas no coinciden', 'error');
+        return;
+      }
+
+      const roleId = Number(document.getElementById('user-role-id').value);
+      if (!roleId) {
+        MT.toast('Por favor seleccione un rol para el usuario', 'error');
+        return;
+      }
+
+      const genderVal = document.querySelector('input[name="gender"]:checked')?.value || 'female';
+      const selectedRoleObj = systemRolesList.find(r => Number(r.id) === roleId);
+      const rolePerms = Array.isArray(selectedRoleObj?.permissions) ? selectedRoleObj.permissions : [];
+
+      const payload = {
+        first_name: firstName,
+        last_name: lastName,
+        name: `${firstName} ${lastName}`.trim(),
+        cedula: document.getElementById('user-cedula').value.trim(),
+        email: email,
+        gender: genderVal,
+        role_id: roleId,
+        active: document.getElementById('user-active').checked,
+        is_verified: document.getElementById('user-verified').checked,
+        permissions: rolePerms
+      };
+
+      if (pass) payload.password = pass;
+
+      try {
+        if (id) {
+          await MT.api(`/users/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+          MT.toast('Usuario actualizado exitosamente', 'success');
+        } else {
+          await MT.api('/users', { method: 'POST', body: JSON.stringify(payload) });
+          MT.toast('Usuario creado exitosamente', 'success');
+        }
+
+        hideNewUserView();
+        loadUsersData();
+      } catch (err) {
+        MT.toast(err.message || 'Error al guardar usuario', 'error');
+      }
+    }
+
+    // Toggle Active Status
+    async function toggleActiveStatus(id) {
+      try {
+        await MT.api(`/users/${id}/toggle-status`, { method: 'PATCH' });
+        MT.toast('Estado del usuario actualizado', 'info');
+        loadUsersData();
+      } catch (err) {
+        MT.toast(err.message || 'Error al cambiar estado', 'error');
+      }
+    }
+
+    // Soft delete
+    async function softDeleteUser(id) {
+      if (!confirm('¿Seguro que deseas enviar este usuario a la papelera?')) return;
+      try {
+        await MT.api(`/users/${id}`, { method: 'DELETE' });
+        MT.toast('Usuario enviado a eliminados', 'info');
+        loadUsersData();
+      } catch (err) {
+        MT.toast(err.message || 'Error al eliminar usuario', 'error');
+      }
+    }
+
+    // Restore user
+    async function restoreUser(id) {
+      try {
+        await MT.api(`/users/${id}/restore`, { method: 'POST' });
+        MT.toast('Usuario restaurado exitosamente', 'success');
+        loadUsersData();
+      } catch (err) {
+        MT.toast(err.message || 'Error al restaurar usuario', 'error');
+      }
+    }
+
+    // Permanent delete
+    async function permanentDeleteUser(id) {
+      if (!confirm('¿ADVERTENCIA: Esta acción es irreversible. ¿Deseas eliminar permanentemente a este usuario?')) return;
+      try {
+        await MT.api(`/users/${id}?permanent=true`, { method: 'DELETE' });
+        MT.toast('Usuario eliminado definitivamente', 'success');
+        loadUsersData();
+      } catch (err) {
+        MT.toast(err.message || 'Error al eliminar usuario', 'error');
+      }
+    }
+  </script>
+</body>
+</html>

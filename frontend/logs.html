@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi turno — Auditoría y Logs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="styles.css?v=2.0">
+  <style>
+    .logs-filter-bar {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 16px 24px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+  </style>
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <div id="sidebar-container"></div>
+
+    <main class="app-main">
+      <div id="topbar-container"></div>
+
+      <div class="content-body">
+        <div class="logs-filter-bar">
+          <div class="flex-align gap-3">
+            <i class="fa-solid fa-shield-halved text-primary font-24"></i>
+            <div>
+              <h3 class="mb-0">Registro de Auditoría de Acciones</h3>
+              <p class="text-muted text-sm mb-0">Trazabilidad completa de operaciones y eventos de seguridad</p>
+            </div>
+          </div>
+          <button class="btn btn-secondary" onclick="loadLogs()"><i class="fa-solid fa-rotate-right"></i> Actualizar</button>
+        </div>
+
+        <div class="card table-card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th># ID</th>
+                <th>Usuario</th>
+                <th>Acción</th>
+                <th>Entidad</th>
+                <th>Detalles</th>
+                <th>Dirección IP</th>
+                <th>Fecha y Hora</th>
+              </tr>
+            </thead>
+            <tbody id="logs-table-body">
+              <tr><td colspan="7" class="text-center py-4 text-muted">Cargando registros...</td></tr>
+            </tbody>
+          </table>
+
+          <div class="p-4 flex-between" style="border-top:1px solid #e2e8f0;">
+            <button class="btn btn-xs btn-secondary" id="btn-prev-page" onclick="changePage(-1)" disabled><i class="fa-solid fa-chevron-left"></i> Anterior</button>
+            <span class="text-muted text-sm" id="page-info">Página 1</span>
+            <button class="btn btn-xs btn-secondary" id="btn-next-page" onclick="changePage(1)"><i class="fa-solid fa-chevron-right"></i> Siguiente</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="app.js"></script>
+  <script>
+    let currentOffset = 0;
+    const limit = 30;
+    let totalLogs = 0;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      MT.renderSidebar('logs');
+      MT.renderTopbar('Auditoría y Logs', 'Seguridad, acciones e historial de auditoría');
+      loadLogs();
+    });
+
+    async function loadLogs() {
+      try {
+        const res = await MT.api(`/logs?limit=${limit}&offset=${currentOffset}`);
+        if (!res) return;
+
+        totalLogs = res.total || 0;
+        renderLogsTable(res.logs || []);
+        updatePagination();
+      } catch (err) {
+        console.error('Error cargando logs:', err);
+      }
+    }
+
+    function renderLogsTable(logs) {
+      const tbody = document.getElementById('logs-table-body');
+      if (!logs || logs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">No hay registros de auditoría disponibles.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = logs.map(l => `
+        <tr>
+          <td><strong>#${l.id}</strong></td>
+          <td>${l.user ? `${l.user.name} <small class="text-muted">(${l.user.email})</small>` : '<span class="text-muted">Sistema / Anónimo</span>'}</td>
+          <td><span class="badge-pref" style="background:#f1f5f9; color:#334155; border-color:#cbd5e1;">${l.action || 'evento'}</span></td>
+          <td>${l.entity || 'sistema'} ${l.entity_id ? `#${l.entity_id}` : ''}</td>
+          <td><code class="text-xs">${l.details ? JSON.stringify(l.details) : '—'}</code></td>
+          <td><span class="text-muted text-xs">${l.ip_address || '127.0.0.1'}</span></td>
+          <td>${new Date(l.created_at).toLocaleString()}</td>
+        </tr>
+      `).join('');
+    }
+
+    function updatePagination() {
+      const currentPage = Math.floor(currentOffset / limit) + 1;
+      const totalPages = Math.ceil(totalLogs / limit) || 1;
+      document.getElementById('page-info').textContent = `Página ${currentPage} de ${totalPages} (Total: ${totalLogs} registros)`;
+
+      document.getElementById('btn-prev-page').disabled = currentOffset <= 0;
+      document.getElementById('btn-next-page').disabled = currentOffset + limit >= totalLogs;
+    }
+
+    function changePage(direction) {
+      currentOffset += direction * limit;
+      if (currentOffset < 0) currentOffset = 0;
+      loadLogs();
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi turno — Gestión de Mostradores y Ventanillas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="styles.css?v=2.0">
+  <style>
+    .counter-admin-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px;
+    }
+    .counter-admin-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      transition: all 0.2s;
+    }
+    .counter-admin-card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
+    .counter-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+    .counter-name-box h3 { font-size: 18px; margin: 0 0 4px; font-weight: 700; }
+    .service-assigned-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 6px;
+    }
+    .agent-assigned-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      background: #f8fafc;
+      border-radius: 10px;
+      margin: 14px 0;
+      font-size: 13px;
+    }
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(15,23,42,0.6); backdrop-filter: blur(4px);
+      display: none; align-items: center; justify-content: center; z-index: 9999;
+      opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
+    }
+    .modal-overlay.open,
+    .modal-overlay[style*="display: flex"] {
+      display: flex !important;
+      opacity: 1 !important;
+      pointer-events: auto !important;
+    }
+    .modal-box {
+      background: #fff; border-radius: 20px; max-width: 500px; width: 90%; padding: 28px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    }
+  </style>
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <div id="sidebar-container"></div>
+
+    <main class="app-main">
+      <div id="topbar-container"></div>
+
+      <div class="content-body">
+        <div class="flex-between mb-4">
+          <div>
+            <h2 class="mb-1">Mostradores y Puestos de Atención</h2>
+            <p class="text-muted text-sm mb-0">Define los mostradores físicos, asigna servicios y operadores</p>
+          </div>
+          <button class="btn btn-primary" onclick="openCreateCounterModal()">
+            <i class="fa-solid fa-plus"></i> Nuevo Mostrador
+          </button>
+        </div>
+
+        <!-- Filtro Rápido por Estado de Mostrador -->
+        <div class="p-3 mb-4" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <span style="font-size:12px; font-weight:800; color:#64748b; text-transform:uppercase; margin-right:4px;"><i class="fa-solid fa-filter text-primary"></i> Filtrar por Estado:</span>
+          <button type="button" class="btn btn-xs btn-outline-primary active counter-filter-btn" onclick="setCounterFilter('all', this)">Todos (<span id="cnt-all">0</span>)</button>
+          <button type="button" class="btn btn-xs btn-outline-primary counter-filter-btn" onclick="setCounterFilter('active', this)">🟢 Disponibles (<span id="cnt-active">0</span>)</button>
+          <button type="button" class="btn btn-xs btn-outline-primary counter-filter-btn" onclick="setCounterFilter('busy', this)">🔴 Atendiendo (<span id="cnt-busy">0</span>)</button>
+          <button type="button" class="btn btn-xs btn-outline-primary counter-filter-btn" onclick="setCounterFilter('paused', this)">⏸️ En Pausa / Receso (<span id="cnt-paused">0</span>)</button>
+          <button type="button" class="btn btn-xs btn-outline-primary counter-filter-btn" onclick="setCounterFilter('inactive', this)">⏹️ Inactivos (<span id="cnt-inactive">0</span>)</button>
+        </div>
+
+        <div class="counter-admin-grid" id="counters-admin-container">
+          <div class="loading-state"><i class="fa-solid fa-spinner fa-spin"></i> Cargando mostradores...</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal Crear / Editar Mostrador -->
+  <div class="modal-overlay" id="counter-modal">
+    <div class="modal-box">
+      <div class="flex-between mb-3">
+        <h3 id="counter-modal-title" class="m-0">Crear Mostrador</h3>
+        <button style="border:none; background:none; font-size:20px; cursor:pointer;" onclick="closeCounterModal()">✕</button>
+      </div>
+
+      <form id="counter-form" onsubmit="handleSaveCounter(event)">
+        <input type="hidden" id="counter-id">
+
+        <div class="form-group mb-3">
+          <label class="form-label" for="counter-name">Nombre del Mostrador o Ventanilla *</label>
+          <input type="text" id="counter-name" class="form-input" placeholder="Ej: Ventanilla 1 - Facturación, Consultorio 2" required>
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="form-label" for="counter-service-id">Área de Servicio Asignada (Desde donde llamará turnos)</label>
+          <select id="counter-service-id" class="form-input">
+            <option value="">-- General / Múltiple --</option>
+          </select>
+        </div>
+
+        <div class="form-group mb-4">
+          <label class="form-label" for="counter-agent-id">Operador / Agente Asignado</label>
+          <select id="counter-agent-id" class="form-input">
+            <option value="">-- Sin operador fijo --</option>
+          </select>
+        </div>
+
+        <div class="flex-between">
+          <button type="button" class="btn btn-secondary" onclick="closeCounterModal()">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar Mostrador</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="app.js"></script>
+  <script>
+    let countersList = [];
+    let servicesList = [];
+    let usersList = [];
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      MT.renderSidebar('counters');
+      MT.renderTopbar('Mostradores', 'Control de ventanillas y monitores de atención');
+      await loadPrerequisites();
+      await loadCounters();
+    });
+
+    async function loadPrerequisites() {
+      try {
+        servicesList = await MT.api('/services').catch(() => []);
+        usersList = await MT.api('/users').catch(() => []);
+
+        // Populate selects
+        const sSelect = document.getElementById('counter-service-id');
+        sSelect.innerHTML = '<option value="">-- General / Múltiple --</option>' +
+          servicesList.map(s => `<option value="${s.id}">${s.name} (${s.prefix})</option>`).join('');
+
+        const uSelect = document.getElementById('counter-agent-id');
+        uSelect.innerHTML = '<option value="">-- Sin operador fijo --</option>' +
+          usersList.map(u => `<option value="${u.id}">${u.name} (${u.email})</option>`).join('');
+      } catch (e) {}
+    }
+
+    async function loadCounters() {
+      try {
+        countersList = await MT.api('/counters');
+        renderCounters(countersList || []);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    let activeCounterFilter = 'all';
+
+    function setCounterFilter(status, btn) {
+      activeCounterFilter = status;
+      document.querySelectorAll('.counter-filter-btn').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      renderCounters(countersList || []);
+    }
+
+    function updateCounterCounts(list) {
+      if (!list) return;
+      document.getElementById('cnt-all').textContent = list.length;
+      document.getElementById('cnt-active').textContent = list.filter(c => c.active && c.status === 'active').length;
+      document.getElementById('cnt-busy').textContent = list.filter(c => c.active && c.status === 'busy').length;
+      document.getElementById('cnt-paused').textContent = list.filter(c => c.active && c.status === 'paused').length;
+      document.getElementById('cnt-inactive').textContent = list.filter(c => !c.active || c.status === 'inactive').length;
+    }
+
+    function renderCounters(list) {
+      updateCounterCounts(list);
+      const container = document.getElementById('counters-admin-container');
+
+      let filtered = list;
+      if (activeCounterFilter === 'active') {
+        filtered = list.filter(c => c.active && c.status === 'active');
+      } else if (activeCounterFilter === 'busy') {
+        filtered = list.filter(c => c.active && c.status === 'busy');
+      } else if (activeCounterFilter === 'paused') {
+        filtered = list.filter(c => c.active && c.status === 'paused');
+      } else if (activeCounterFilter === 'inactive') {
+        filtered = list.filter(c => !c.active || c.status === 'inactive');
+      }
+
+      if (!filtered || filtered.length === 0) {
+        container.innerHTML = '<p class="text-muted p-4">No se encontraron mostradores para el filtro seleccionado.</p>';
+        return;
+      }
+
+      container.innerHTML = filtered.map(c => `
+        <div class="counter-admin-card" style="${c.status === 'paused' ? 'border:2px solid #f59e0b; background:#fffbf0;' : ''}">
+          <div class="counter-top">
+            <div class="counter-name-box">
+              <h3>${c.name}</h3>
+              <span class="service-assigned-badge" style="background:${c.service?.color || '#0284c7'}15; color:${c.service?.color || '#0284c7'}; border:1px solid ${c.service?.color || '#0284c7'}40;">
+                <i class="fa-solid fa-${c.service?.icon || 'briefcase'}"></i> ${c.service ? c.service.name : 'Todas las áreas'}
+              </span>
+            </div>
+            <span class="status-pill status-${c.status}" style="${c.status === 'paused' ? 'background:#fef3c7; color:#b45309; border:1px solid #fcd34d;' : ''}">
+              ${c.status === 'busy' ? '🔴 Atendiendo' : c.status === 'paused' ? '⏸️ En Pausa' : c.status === 'active' ? '🟢 Disponible' : '⚪ Inactivo'}
+            </span>
+          </div>
+
+          <div class="agent-assigned-row">
+            <i class="fa-solid fa-user-gear text-primary"></i>
+            <div>
+              <strong style="display:block; font-size:13px;">${c.agent ? c.agent.name : 'Sin operador asignado'}</strong>
+              <small class="text-muted">${c.agent ? (c.agent.email || 'Operador Activo') : 'Asignable en cualquier momento'}</small>
+            </div>
+          </div>
+
+          <div class="flex-between mt-auto pt-3" style="border-top:1px solid #f1f5f9; gap:6px; flex-wrap:wrap;">
+            <a href="call.html" class="btn btn-xs btn-primary" style="padding:6px 10px;">
+              <i class="fa-solid fa-headset"></i> Atender
+            </a>
+            ${c.agent_id || c.agent ? `
+              <button class="btn btn-xs" style="${c.status === 'paused' ? 'background:#dcfce7; color:#15803d; border:1px solid #86efac;' : 'background:#fef3c7; color:#b45309; border:1px solid #fcd34d;'}" onclick="pauseCounter(${c.id})" title="${c.status === 'paused' ? 'Reanudar disponibilidad' : 'Poner en Pausa / Receso'}">
+                <i class="fa-solid fa-${c.status === 'paused' ? 'play' : 'pause'}"></i> ${c.status === 'paused' ? 'Reanudar' : 'Pausar'}
+              </button>
+              <button class="btn btn-xs" style="background:#fee2e2; color:#dc2626; border:1px solid #fca5a5; font-weight:700;" onclick="releaseCounter(${c.id}, '${c.name}')" title="Liberar puesto y finalizar jornada del operador">
+                <i class="fa-solid fa-right-from-bracket"></i> Liberar
+              </button>
+            ` : ''}
+            <button class="btn btn-xs btn-secondary" onclick="openEditCounterModal(${c.id})" title="Editar">
+              <i class="fa-solid fa-pen"></i>
+            </button>
+            <button class="btn btn-xs btn-secondary" onclick="toggleCounterActive(${c.id})" title="${c.active ? 'Desactivar' : 'Activar'}">
+              <i class="fa-solid fa-${c.active ? 'eye-slash' : 'eye'}"></i>
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function pauseCounter(id) {
+      try {
+        const res = await MT.api(`/counters/${id}/pause`, { method: 'POST' });
+        MT.toast(res.message || 'Estado de pausa actualizado', 'info');
+        loadCounters();
+      } catch (err) {
+        MT.toast(err.message || 'Error al cambiar pausa', 'error');
+      }
+    }
+
+    function openCreateCounterModal() {
+      document.getElementById('counter-form').reset();
+      document.getElementById('counter-id').value = '';
+      document.getElementById('counter-modal-title').textContent = 'Crear Mostrador o Ventanilla';
+      document.getElementById('counter-modal').style.display = 'flex';
+    }
+
+    function openEditCounterModal(id) {
+      const c = countersList.find(item => item.id === id);
+      if (!c) return;
+
+      document.getElementById('counter-id').value = c.id;
+      document.getElementById('counter-name').value = c.name;
+      document.getElementById('counter-service-id').value = c.service_id || '';
+      document.getElementById('counter-agent-id').value = c.agent_id || '';
+      document.getElementById('counter-modal-title').textContent = 'Editar Mostrador';
+      document.getElementById('counter-modal').style.display = 'flex';
+    }
+
+    function closeCounterModal() {
+      document.getElementById('counter-modal').style.display = 'none';
+    }
+
+    async function handleSaveCounter(e) {
+      e.preventDefault();
+      const id = document.getElementById('counter-id').value;
+      const payload = {
+        name: document.getElementById('counter-name').value,
+        service_id: document.getElementById('counter-service-id').value || null,
+        agent_id: document.getElementById('counter-agent-id').value || null
+      };
+
+      try {
+        if (id) {
+          await MT.api(`/counters/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+          MT.toast('Mostrador actualizado con éxito', 'success');
+        } else {
+          await MT.api('/counters', { method: 'POST', body: JSON.stringify(payload) });
+          MT.toast('Mostrador creado con éxito', 'success');
+        }
+        closeCounterModal();
+        loadCounters();
+      } catch (err) {
+        MT.toast(err.message || 'Error guardando mostrador', 'error');
+      }
+    }
+
+    async function releaseCounter(id, counterName) {
+      if (!confirm(`¿Desea liberar el mostrador "${counterName}" y finalizar la jornada del operador asignado?`)) return;
+      try {
+        await MT.api(`/counters/${id}/release`, { method: 'POST' });
+        MT.toast(`Mostrador "${counterName}" liberado exitosamente`, 'success');
+        loadCounters();
+      } catch (err) {
+        MT.toast(err.message || 'Error al liberar mostrador', 'error');
+      }
+    }
+
+    async function toggleCounterActive(id) {
+      try {
+        await MT.api(`/counters/${id}`, { method: 'DELETE' });
+        MT.toast('Estado del mostrador actualizado', 'info');
+        loadCounters();
+      } catch (err) {
+        MT.toast(err.message || 'Error actualizando mostrador', 'error');
+      }
+    }
+  </script>
+</body>
+</html>

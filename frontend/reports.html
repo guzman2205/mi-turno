@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi turno — Reportes y Métricas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="styles.css?v=2.0">
+  <style>
+    .reports-filter-bar {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 16px 24px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .stats-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+  </style>
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <div id="sidebar-container"></div>
+
+    <main class="app-main">
+      <div id="topbar-container"></div>
+
+      <div class="content-body">
+        <div class="reports-filter-bar">
+          <div class="flex-align gap-3" style="flex-wrap:wrap;">
+            <i class="fa-solid fa-chart-line text-primary font-24"></i>
+            <div>
+              <h3 class="mb-0">Reportes de Atención</h3>
+              <p class="text-muted text-sm mb-0">Selecciona la fecha para consultar métricas históricas</p>
+            </div>
+            <div class="flex-align gap-2 ml-4">
+              <label class="form-label mb-0 text-sm" for="report-date">Fecha:</label>
+              <input type="date" id="report-date" class="form-input" style="width: auto;" onchange="loadReports()">
+            </div>
+          </div>
+          <div class="flex-align gap-2">
+            <button class="btn btn-primary" onclick="exportCSV()"><i class="fa-solid fa-file-csv"></i> Exportar a CSV</button>
+            <button class="btn btn-secondary" onclick="loadReports()"><i class="fa-solid fa-rotate-right"></i> Actualizar</button>
+          </div>
+        </div>
+
+        <!-- Summary KPIs -->
+        <div class="stats-summary-grid">
+          <div class="kpi-card">
+            <div class="kpi-icon blue"><i class="fa-solid fa-ticket"></i></div>
+            <div class="kpi-data">
+              <span class="kpi-value" id="kpi-total">0</span>
+              <span class="kpi-label">Total Emitidos</span>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon green"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="kpi-data">
+              <span class="kpi-value" id="kpi-attended">0</span>
+              <span class="kpi-label">Atendidos Exitosos</span>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon red"><i class="fa-solid fa-user-xmark"></i></div>
+            <div class="kpi-data">
+              <span class="kpi-value" id="kpi-absent">0</span>
+              <span class="kpi-label">Ausentes</span>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon purple"><i class="fa-solid fa-clock"></i></div>
+            <div class="kpi-data">
+              <span class="kpi-value" id="kpi-wait-avg">0 min</span>
+              <span class="kpi-label">Promedio de Espera</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Breakdown by Service Table -->
+        <div class="card table-card mb-4">
+          <div class="card-header">
+            <h3><i class="fa-solid fa-briefcase text-primary"></i> Desglose por Área de Servicio</h3>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Servicio</th>
+                <th>Prefijo</th>
+                <th>Total Emitidos</th>
+                <th>Tiempo Promedio de Espera</th>
+                <th>Tiempo Promedio de Atención</th>
+              </tr>
+            </thead>
+            <tbody id="services-report-body">
+              <tr><td colspan="5" class="text-center py-4 text-muted">Cargando reporte...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      MT.renderSidebar('reports');
+      MT.renderTopbar('Reportes y Métricas', 'Estadísticas de atención y tiempos de servicio');
+
+      // Set today as default date
+      const today = new Date().toISOString().slice(0, 10);
+      document.getElementById('report-date').value = today;
+
+      loadReports();
+    });
+
+    async function loadReports() {
+      const date = document.getElementById('report-date').value || new Date().toISOString().slice(0, 10);
+      try {
+        const data = await MT.api(`/reports/daily?date=${date}`);
+        if (!data) return;
+
+        // Render KPIs
+        document.getElementById('kpi-total').textContent = data.stats?.total || 0;
+        document.getElementById('kpi-attended').textContent = data.stats?.attended || 0;
+        document.getElementById('kpi-absent').textContent = data.stats?.absent || 0;
+
+        // Calculate global avg wait
+        let totalWait = 0, countWait = 0;
+        if (data.byService && data.byService.length > 0) {
+          data.byService.forEach(s => {
+            if (s.avg_wait) {
+              totalWait += parseFloat(s.avg_wait) * (s.total || 1);
+              countWait += parseInt(s.total || 1, 10);
+            }
+          });
+        }
+        const globalAvgWait = countWait > 0 ? Math.round(totalWait / countWait) : 0;
+        document.getElementById('kpi-wait-avg').textContent = `${globalAvgWait} min`;
+
+        // Render Service Table
+        renderServicesTable(data.byService || []);
+      } catch (err) {
+        console.error('Error cargando reportes:', err);
+        MT.toast && MT.toast('Error al cargar datos del reporte', 'error');
+      }
+    }
+
+    function renderServicesTable(byService) {
+      const tbody = document.getElementById('services-report-body');
+      if (!byService || byService.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">No hay registros de atención para la fecha seleccionada.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = byService.map(s => `
+        <tr>
+          <td><strong style="color:${s.service?.color || '#0f172a'};">${s.service?.name || 'General'}</strong></td>
+          <td><span class="badge-pref" style="background:#e0f2fe; color:#0369a1; border-color:#bae6fd;">${s.service?.prefix || 'GEN'}</span></td>
+          <td><strong>${s.total || 0}</strong></td>
+          <td>${Math.round(s.avg_wait || 0)} minutos</td>
+          <td>${Math.round(s.avg_attend || 0)} minutos</td>
+        </tr>
+      `).join('');
+    }
+
+    async function exportCSV() {
+      const date = document.getElementById('report-date').value || new Date().toISOString().slice(0, 10);
+      try {
+        const token = MT.getToken();
+        const res = await fetch(`${MT.apiBase}/reports/daily?date=${date}&format=csv`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error('Error al generar archivo CSV');
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `reporte-diario-${date}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        MT.toast('Reporte CSV descargado exitosamente', 'success');
+      } catch (err) {
+        MT.toast(err.message || 'Error al exportar CSV', 'error');
+      }
+    }
+  </script>
+</body>
+</html>
