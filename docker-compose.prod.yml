@@ -24,7 +24,7 @@ services:
 
   # ── Backend API (Imagen preconstruida de GitHub GHCR) ────────────────────
   backend:
-    image: ghcr.io/lv322608-spec/miturno-backend:latest
+    image: ghcr.io/guzman2205/miturno-backend:latest
     container_name: miturno_api
     restart: unless-stopped
     env_file:
@@ -55,7 +55,7 @@ services:
 
   # ── Frontend Web (Imagen preconstruida de GitHub GHCR) ───────────────────
   frontend:
-    image: ghcr.io/lv322608-spec/miturno-frontend:latest
+    image: ghcr.io/guzman2205/miturno-frontend:latest
     container_name: miturno_web
     restart: unless-stopped
     ports:
