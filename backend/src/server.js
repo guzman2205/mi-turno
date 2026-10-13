@@ -10,6 +10,7 @@ const { Server }   = require('socket.io');
 const { sequelize } = require('./models');
 const seed          = require('./seeders/seed');
 const { scheduleDailyReset } = require('./services/dailyReset');
+const { verifyOnPremiseLicense } = require('./middleware/licenseCheck');
 
 // Import routes
 const authRoutes         = require('./routes/auth');
@@ -223,6 +224,7 @@ async function ensureDbColumns() {
     await sequelize.query(`INSERT INTO settings (key, value, created_at, updated_at) VALUES ('tts_chime_sound', 'custom', NOW(), NOW()) ON CONFLICT (key) DO UPDATE SET value = 'custom';`).catch(() => {});
 
     console.log('✅ Columnas y esquema de DB auditados y sincronizados correctamente.');
+    verifyOnPremiseLicense();
   } catch (err) {
     console.warn('⚠️ Nota sobre verificación de esquema de DB:', err.message);
   }
